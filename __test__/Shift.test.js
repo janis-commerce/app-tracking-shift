@@ -1,5 +1,6 @@
 import Shift from '../src/classes/Shift';
 import { mockRequest, mockTimeTracker } from '../__mocks__';
+import { worklogTypes, parsedWorklogTypes } from '../__mocks__/worklogTypes';
 
 describe('Shift', () => {
 	let shift;
@@ -165,6 +166,79 @@ describe('Shift', () => {
 			mockRequest.post.mockRejectedValueOnce(error);
 
 			await expect(shift.finishShift()).rejects.toThrow('Close shift failed');
+		});
+	});
+
+	describe('fetchWorklogTypes', () => {
+		it('should fetch worklog types successfully', async () => {
+
+			mockRequest.list.mockResolvedValueOnce({
+				result: worklogTypes
+			});
+
+			const result = await shift.fetchWorklogTypes();
+
+			expect(mockRequest.list).toHaveBeenCalledWith({
+				service: 'staff',
+				namespace: 'work-log-type',
+				headers: {
+					pageSize: 100,
+				},
+				queryParams: {
+					filters: {
+						status: "active",
+						type: ["work", "pause", "problem"]
+					}
+				}
+			});
+
+			expect(result).toEqual(parsedWorklogTypes);
+		});
+
+		it('should handle empty worklog types response', async () => {
+			mockRequest.list.mockResolvedValueOnce({
+				result: undefined,
+			});
+
+			const result = await shift.fetchWorklogTypes();
+
+			expect(result).toEqual([]);
+		});
+
+		it('should filter out worklog types without id or referenceId', async () => {
+			const mockWorklogTypes = [
+				...worklogTypes,
+				{
+					id: 'type-4',
+					referenceId: 'ref-4',
+					name: 'Trabajo Mínimo'
+				}
+			];
+
+			mockRequest.list.mockResolvedValueOnce({
+				result: mockWorklogTypes
+			});
+
+			const result = await shift.fetchWorklogTypes();
+
+			expect(result).toEqual([
+				...parsedWorklogTypes,
+				{
+					id: 'type-4',
+					referenceId: 'ref-4',
+					worklogName: 'Trabajo Mínimo',
+					type: '',
+					description: '',
+					suggestedTime: 0
+				}
+			]);
+		});
+
+		it('should handle staff service errors', async () => {
+			const error = new Error('API Error');
+			mockRequest.list.mockRejectedValueOnce(error);
+
+			await expect(shift.fetchWorklogTypes()).rejects.toThrow('API Error');
 		});
 	});
 

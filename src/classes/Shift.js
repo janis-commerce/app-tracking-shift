@@ -1,5 +1,6 @@
 import StaffApiServices from "./StaffApiServices";
 import TimeTracker from "../services/TimeTrackerService";
+import ShiftWorklogs from "./ShiftWorklogs";
 
 /**
  * Class to manage work shifts
@@ -11,6 +12,7 @@ import TimeTracker from "../services/TimeTrackerService";
 class Shift {
     constructor({environment}) {
         this.staffService = new StaffApiServices({environment});
+        this.worklogs = new ShiftWorklogs();
     }
 
     /**
@@ -58,6 +60,23 @@ class Shift {
             }).catch(() => null);
 
             return Promise.resolve(shiftId);
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
+
+    /**
+     * Fetch the work log types from the staff MS and prepare them for register an activity.
+     * @throws {Error} error
+     * @returns {Promise<Array>} workLogTypes => Array of work log types
+     */
+
+    async fetchWorklogTypes() {
+        try {
+            const {result: workLogTypes = []} = await this.staffService.getWorkLogTypes();
+            const parsedWorkLogTypes = this.worklogs.prepareWorkLogTypes(workLogTypes);
+
+            return Promise.resolve(parsedWorkLogTypes);
         } catch (error) {
             return Promise.reject(error);
         }

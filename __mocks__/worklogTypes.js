@@ -1,0 +1,72 @@
+const worklogTypes = [
+    {
+        "canBeUpdated":true,
+        "dateCreated":"2025-07-30T03:12:28.666Z",
+        "dateModified":"2025-07-30T03:12:28.673Z",
+        "description":"",
+        "name":"Default picking work",
+        "referenceId":"default-picking-work",
+        "status":"active",
+        "type":"work",
+        "userCreated":"5e7d175c61152432f3704c52",
+        "userModified":"5e7d175c61152432f3704c52",
+        "id":"68898d99b8a4855dbd743224"
+    },
+    {
+        "canBeUpdated":true,
+        "dateCreated":"2025-07-30T03:13:20.128Z",
+        "dateModified":"2025-07-30T03:13:20.148Z",
+        "description":"",
+        "name":"Default short pause",
+        "referenceId":"default-short-pause",
+        "status":"active",
+        "suggestedTime":5,
+        "type":"pause",
+        "userCreated":"5e7d175c61152432f3704c52",
+        "userModified":"5e7d175c61152432f3704c52",
+        "id":"68898dcfb8a4855dbd743225"
+    },
+    {
+        "canBeUpdated":true,
+        "dateCreated":"2025-07-30T03:13:53.227Z",
+        "dateModified":"2025-07-30T03:13:53.230Z",
+        "description":"",
+        "name":"Default long pause",
+        "referenceId":"default-long-pause",
+        "status":"active",
+        "suggestedTime":60,
+        "type":"pause",
+        "userCreated":"5e7d175c61152432f3704c52",
+        "userModified":"5e7d175c61152432f3704c52",
+        "id":"68898df0b8a4855dbd743226"
+    }
+]
+
+const parsedWorklogTypes = [
+    {
+        id: '68898d99b8a4855dbd743224',
+        referenceId: 'default-picking-work',
+        worklogName: 'Default picking work',
+        type: 'work',
+        description: '',
+        suggestedTime: 0,
+    },
+    {
+        id: '68898dcfb8a4855dbd743225',
+        referenceId: 'default-short-pause',
+        worklogName: 'Default short pause',
+        type: 'pause',
+        description: '',
+        suggestedTime: 5,
+    },
+    {
+        id: '68898df0b8a4855dbd743226',
+        referenceId: 'default-long-pause',
+        worklogName: 'Default long pause',
+        type: 'pause',
+        description: '',
+        suggestedTime: 60,
+    }
+]
+
+export {worklogTypes, parsedWorklogTypes};
