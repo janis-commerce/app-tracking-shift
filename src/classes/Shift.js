@@ -10,8 +10,7 @@ import TimeTracker from "../services/TimeTrackerService";
 
 class Shift {
     constructor({environment}) {
-        this.environment = environment;
-        this.staffService = new StaffApiServices({environment: this.environment});
+        this.staffService = new StaffApiServices({environment});
     }
 
     /**

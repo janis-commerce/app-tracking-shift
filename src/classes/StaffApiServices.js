@@ -2,7 +2,8 @@ import Request from "@janiscommerce/app-request";
 
 class StaffApiServices {
     constructor({environment}) {
-        this.request = new Request({JANIS_ENV: environment});
+        this.environment = environment;
+        this.request = new Request({JANIS_ENV: this.environment});
         this.service = "staff";
     }
 
