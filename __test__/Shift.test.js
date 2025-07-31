@@ -1,4 +1,4 @@
-import Shift from '../src/classes/Shift';
+import Shift from '../lib/Shift';
 import { mockRequest, mockTimeTracker } from '../__mocks__';
 import { worklogTypes, parsedWorklogTypes } from '../__mocks__/worklogTypes';
 
@@ -10,7 +10,7 @@ describe('Shift', () => {
 		shift = new Shift({ environment: 'test' });
 	});
 
-	describe('initShift', () => {
+	describe('open', () => {
 		it('should start a shift successfully', async () => {
 			// Setup mocks
 			const mockShiftId = 'shift-123';
@@ -20,7 +20,7 @@ describe('Shift', () => {
 			mockTimeTracker.addEvent.mockResolvedValueOnce();
 
 			// Execute method
-			const result = await shift.initShift();
+			const result = await shift.open();
 
 			// Verify calls
 			expect(mockRequest.post).toHaveBeenCalledWith({
@@ -44,7 +44,7 @@ describe('Shift', () => {
 			});
 			mockTimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.initShift({ date: specificDate });
+			const result = await shift.open({ date: specificDate });
 
 			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
@@ -58,7 +58,7 @@ describe('Shift', () => {
 			const error = new Error('API Error');
 			mockRequest.post.mockRejectedValueOnce(error);
 
-			await expect(shift.initShift()).rejects.toThrow('API Error');
+			await expect(shift.open()).rejects.toThrow('API Error');
 		});
 
 		it('should continue even if TimeTracker fails', async () => {
@@ -68,7 +68,7 @@ describe('Shift', () => {
 			});
 			mockTimeTracker.addEvent.mockRejectedValueOnce(new Error('Tracking failed'));
 
-			const result = await shift.initShift();
+			const result = await shift.open();
 
 			expect(result).toBe(mockShiftId);
 		});
@@ -77,7 +77,7 @@ describe('Shift', () => {
 			mockRequest.post.mockResolvedValueOnce({});
 			mockTimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.initShift();
+			const result = await shift.open();
 
 			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
@@ -91,7 +91,7 @@ describe('Shift', () => {
 			mockRequest.post.mockResolvedValueOnce({ result: {} });
 			mockTimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.initShift();
+			const result = await shift.open();
 
 			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
@@ -102,7 +102,7 @@ describe('Shift', () => {
 		});
 	});
 
-	describe('finishShift', () => {
+	describe('finish', () => {
 		it('should finish a shift successfully', async () => {
 			const mockShiftId = 'shift-999';
 			mockRequest.post.mockResolvedValueOnce({
@@ -110,7 +110,7 @@ describe('Shift', () => {
 			});
 			mockTimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.finishShift();
+			const result = await shift.finish();
 
 			expect(mockRequest.post).toHaveBeenCalledWith({
 				service: 'staff',
@@ -133,7 +133,7 @@ describe('Shift', () => {
 			});
 			mockTimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.finishShift({ date: specificDate });
+			const result = await shift.finish({ date: specificDate });
 
 			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
@@ -151,7 +151,7 @@ describe('Shift', () => {
 			});
 			mockTimeTracker.addEvent.mockRejectedValueOnce(new Error('id is invalid or null'));
 
-			const result = await shift.finishShift({ date: specificDate });
+			const result = await shift.finish({ date: specificDate });
 
 			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
@@ -165,7 +165,7 @@ describe('Shift', () => {
 			const error = new Error('Close shift failed');
 			mockRequest.post.mockRejectedValueOnce(error);
 
-			await expect(shift.finishShift()).rejects.toThrow('Close shift failed');
+			await expect(shift.finish()).rejects.toThrow('Close shift failed');
 		});
 	});
 
