@@ -10,7 +10,7 @@
 	"coverageReporters": ["html", "text"],
 	"coverageDirectory": "coverage",
 	"collectCoverageFrom": [
-	  "src/classes/Shift.js**",
+	  "lib/Shift.js**",
 	  "!**/node_modules/**",
 	  "!**/vendor/**",
 	  "!**/env/**",
