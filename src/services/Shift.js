@@ -1,5 +1,5 @@
-import StaffApiServices from "./StaffApiServices";
-import TimeTracker from "../services/TimeTrackerService";
+import StaffApiServices from "../infrastructure/StaffApiServices";
+import TimeTracker from "../infrastructure/TimeTrackerService";
 
 /**
  * Class to manage work shifts

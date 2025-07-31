@@ -1,3 +1,3 @@
-import Shift from "./classes/Shift";
+import Shift from "./services/Shift";
 
 export { Shift };

@@ -1,4 +1,4 @@
-import Shift from '../src/classes/Shift';
+import Shift from '../src/services/Shift';
 import { mockRequest, mockTimeTracker } from '../__mocks__';
 
 describe('Shift', () => {
