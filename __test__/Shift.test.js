@@ -1,32 +1,28 @@
 import Shift from '../lib/Shift';
-import { mockRequest, mockTimeTracker } from '../__mocks__';
 
 describe('Shift', () => {
-	let shift;
-	
 	beforeEach(() => {
 		jest.clearAllMocks();
-		shift = new Shift({ environment: 'test' });
 	});
 
+	const StaffService = require('../lib/StaffApiServices');
+	const TimeTracker = require('../lib/db/TimeTrackerService');
 	describe('open', () => {
+		
 		it('should start a shift successfully', async () => {
 			// Setup mocks
 			const mockShiftId = 'shift-123';
-			mockRequest.post.mockResolvedValueOnce({
+			StaffService.openShift.mockResolvedValueOnce({
 				result: { id: mockShiftId }
 			});
-			mockTimeTracker.addEvent.mockResolvedValueOnce();
+			TimeTracker.addEvent.mockResolvedValueOnce();
 
 			// Execute method
-			const result = await shift.open();
+			const result = await Shift.open();
 
 			// Verify calls
-			expect(mockRequest.post).toHaveBeenCalledWith({
-				service: 'staff',
-				namespace: 'shift-open'
-			});
-			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(StaffService.openShift).toHaveBeenCalled();
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: expect.any(String),
 				type: 'start'
@@ -37,15 +33,14 @@ describe('Shift', () => {
 		it('should start a shift with specific date', async () => {
 			const mockShiftId = 'shift-456';
 			const specificDate = '2024-01-15T10:00:00.000Z';
-			
-			mockRequest.post.mockResolvedValueOnce({
+			StaffService.openShift.mockResolvedValueOnce({
 				result: { id: mockShiftId }
 			});
-			mockTimeTracker.addEvent.mockResolvedValueOnce();
+			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.open({ date: specificDate });
+			const result = await Shift.open({ date: specificDate });
 
-			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: specificDate,
 				type: 'start'
@@ -55,30 +50,32 @@ describe('Shift', () => {
 
 		it('should handle staff service errors', async () => {
 			const error = new Error('API Error');
-			mockRequest.post.mockRejectedValueOnce(error);
+			StaffService.openShift.mockRejectedValueOnce(error);
 
-			await expect(shift.open()).rejects.toThrow('API Error');
+			await expect(Shift.open()).rejects.toThrow('API Error');
 		});
 
 		it('should continue even if TimeTracker fails', async () => {
 			const mockShiftId = 'shift-789';
-			mockRequest.post.mockResolvedValueOnce({
+			StaffService.openShift.mockResolvedValueOnce({
 				result: { id: mockShiftId }
 			});
-			mockTimeTracker.addEvent.mockRejectedValueOnce(new Error('Tracking failed'));
+			
+			TimeTracker.addEvent.mockRejectedValueOnce(new Error('Tracking failed'));
 
-			const result = await shift.open();
+			const result = await Shift.open();
 
 			expect(result).toBe(mockShiftId);
 		});
 
 		it('should handle response without result', async () => {
-			mockRequest.post.mockResolvedValueOnce({});
-			mockTimeTracker.addEvent.mockResolvedValueOnce();
+			StaffService.openShift.mockResolvedValueOnce({});
+			
+			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.open();
+			const result = await Shift.open();
 
-			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
 				time: expect.any(String),
 				type: 'start'
@@ -87,12 +84,13 @@ describe('Shift', () => {
 		});
 
 		it('should handle response with result but without id', async () => {
-			mockRequest.post.mockResolvedValueOnce({ result: {} });
-			mockTimeTracker.addEvent.mockResolvedValueOnce();
+			StaffService.openShift.mockResolvedValueOnce({ result: {} });
+			
+			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.open();
+			const result = await Shift.open();
 
-			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
 				time: expect.any(String),
 				type: 'start'
@@ -104,18 +102,16 @@ describe('Shift', () => {
 	describe('finish', () => {
 		it('should finish a shift successfully', async () => {
 			const mockShiftId = 'shift-999';
-			mockRequest.post.mockResolvedValueOnce({
+			StaffService.closeShift.mockResolvedValueOnce({
 				result: { id: mockShiftId }
 			});
-			mockTimeTracker.addEvent.mockResolvedValueOnce();
+			
+			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.finish();
+			const result = await Shift.finish();
 
-			expect(mockRequest.post).toHaveBeenCalledWith({
-				service: 'staff',
-				namespace: 'shift-close'
-			});
-			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(StaffService.closeShift).toHaveBeenCalled();
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: expect.any(String),
 				type: 'finish'
@@ -127,14 +123,15 @@ describe('Shift', () => {
 			const mockShiftId = 'shift-888';
 			const specificDate = '2024-01-15T18:00:00.000Z';
 			
-			mockRequest.post.mockResolvedValueOnce({
+			StaffService.closeShift.mockResolvedValueOnce({
 				result: { id: mockShiftId }
 			});
-			mockTimeTracker.addEvent.mockResolvedValueOnce();
+			
+			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await shift.finish({ date: specificDate });
+			const result = await Shift.finish({ date: specificDate });
 
-			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: specificDate,
 				type: 'finish'
@@ -145,14 +142,15 @@ describe('Shift', () => {
 		it('should handle response with result but without id', async () => {
 			const specificDate = '2024-01-15T18:00:00.000Z';
 			
-			mockRequest.post.mockResolvedValueOnce({
-				result:undefined
+			StaffService.closeShift.mockResolvedValueOnce({
+				result: undefined
 			});
-			mockTimeTracker.addEvent.mockRejectedValueOnce(new Error('id is invalid or null'));
+			
+			TimeTracker.addEvent.mockRejectedValueOnce(new Error('id is invalid or null'));
 
-			const result = await shift.finish({ date: specificDate });
+			const result = await Shift.finish({ date: specificDate });
 
-			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
 				time: specificDate,
 				type: 'finish'
@@ -162,27 +160,64 @@ describe('Shift', () => {
 
 		it('should handle staff service errors', async () => {
 			const error = new Error('Close shift failed');
-			mockRequest.post.mockRejectedValueOnce(error);
+			StaffService.closeShift.mockRejectedValueOnce(error);
 
-			await expect(shift.finish()).rejects.toThrow('Close shift failed');
+			await expect(Shift.finish()).rejects.toThrow('Close shift failed');
+		});
+	});
+
+	describe('getUserOpenShift', () => {
+		it('should get user open shift successfully', async () => {
+			const mockShift = { id: 'shift-123', status: 'opened' };
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [mockShift]
+			});
+
+			const result = await Shift.getUserOpenShift({ userId: 'user-123', id: 'shift-123' });
+
+			expect(StaffService.getShiftsList).toHaveBeenCalledWith({
+				filters: {
+					userId: 'user-123',
+					status: 'opened',
+					id: 'shift-123'
+				}
+			});
+			expect(result).toEqual(mockShift);
+		});
+
+		it('should return empty object when no open shift found', async () => {
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: undefined
+			});
+
+			const result = await Shift.getUserOpenShift();
+
+			expect(result).toEqual({});
+		});
+
+		it('should handle staff service errors', async () => {
+			const error = new Error('Get shifts list failed');
+			StaffService.getShiftsList.mockRejectedValueOnce(error);
+
+			await expect(Shift.getUserOpenShift({ userId: 'user-123' })).rejects.toThrow('Get shifts list failed');
 		});
 	});
 
 	describe('deleteShiftRegisters', () => {
 		it('should delete all registers successfully', async () => {
-			mockTimeTracker.deleteAllEvents.mockResolvedValueOnce();
+			TimeTracker.deleteAllEvents.mockResolvedValueOnce();
 
-			const result = await shift.deleteShiftRegisters();
+			const result = await Shift.deleteShiftRegisters();
 
-			expect(mockTimeTracker.deleteAllEvents).toHaveBeenCalled();
+			expect(TimeTracker.deleteAllEvents).toHaveBeenCalled();
 			expect(result).toBe(true);
 		});
 
 		it('should handle TimeTracker errors', async () => {
 			const error = new Error('Delete failed');
-			mockTimeTracker.deleteAllEvents.mockRejectedValueOnce(error);
+			TimeTracker.deleteAllEvents.mockRejectedValueOnce(error);
 
-			await expect(shift.deleteShiftRegisters()).rejects.toThrow('Delete failed');
+			await expect(Shift.deleteShiftRegisters()).rejects.toThrow('Delete failed');
 		});
 	});
 }); 

@@ -11,3 +11,14 @@ export const mockTimeTracker = {
 	addEvent: jest.fn(),
 	deleteAllEvents: jest.fn(),
 };
+
+// Mock para Crashlytics
+export const mockCrashlytics = {
+	log: jest.fn(),
+	recordError: jest.fn(),
+	setAttribute: jest.fn(),
+	setAttributes: jest.fn(),
+	setUserId: jest.fn(),
+	setCrashlyticsCollectionEnabled: jest.fn(),
+	isCrashlyticsCollectionEnabled: true,
+};
