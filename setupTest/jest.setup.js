@@ -1,4 +1,4 @@
-import { mockRequest, mockTimeTracker } from '../__mocks__';
+import { mockRequest, mockTimeTracker, mockCrashlytics } from '../__mocks__';
 
 jest.mock('@janiscommerce/app-request', () => ({
 	__esModule: true,
@@ -9,4 +9,9 @@ jest.mock('@janiscommerce/app-request', () => ({
 jest.mock('@janiscommerce/app-tracking-time', () => ({
 	__esModule: true,
 	default: jest.fn().mockImplementation(() => mockTimeTracker),
+}));
+
+jest.mock('../lib/utils/crashlytics', () => ({
+	__esModule: true,
+	default: mockCrashlytics,
 }));
