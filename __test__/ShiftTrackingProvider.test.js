@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
 import Shift from '../lib/Shift';
 
-jest.mock('../lib/utils/getUserId', () => jest.fn());
+jest.mock('../lib/utils/userInfo/getUserId', () => jest.fn());
 
 jest.mock('../lib/utils/crashlytics', () => ({
     log: jest.fn(),
@@ -23,7 +23,7 @@ describe('ShiftTrackingProvider', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        getUserId = require('../lib/utils/getUserId');
+        getUserId = require('../lib/utils/userInfo/getUserId');
         Crashlytics = require('../lib/utils/crashlytics');
     });
 
