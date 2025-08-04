@@ -119,4 +119,18 @@ describe('ShiftTrackingProvider', () => {
             expect(Crashlytics.recordError).toHaveBeenCalledWith(mockError, 'Error opening shift in staff service');
         });
     });
+
+    it('should log to crashlytics when shift opens successfully', async () => {
+        render(
+            <ShiftTrackingProvider environment="test">
+                <div>Test Child</div>
+            </ShiftTrackingProvider>
+        );
+
+        await waitFor(() => {
+            expect(mockShiftInstance.open).toHaveBeenCalledTimes(1);
+            expect(mockCrashlytics.log).toHaveBeenCalledWith('open shift by provider');
+            expect(mockCrashlytics.recordError).not.toHaveBeenCalled();
+        });
+    });
 }); 

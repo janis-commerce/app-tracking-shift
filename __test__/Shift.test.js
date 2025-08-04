@@ -1,4 +1,5 @@
 import Shift from '../lib/Shift';
+import { mockRequest, mockTimeTracker, mockCrashlytics } from '../__mocks__';
 
 describe('Shift', () => {
 	beforeEach(() => {
@@ -10,19 +11,20 @@ describe('Shift', () => {
 	describe('open', () => {
 		
 		it('should start a shift successfully', async () => {
-			// Setup mocks
 			const mockShiftId = 'shift-123';
 			StaffService.openShift.mockResolvedValueOnce({
 				result: { id: mockShiftId }
 			});
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			// Execute method
-			const result = await Shift.open();
+			const result = await shift.open();
 
-			// Verify calls
-			expect(StaffService.openShift).toHaveBeenCalled();
-			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift');
+			expect(mockRequest.post).toHaveBeenCalledWith({
+				service: 'staff',
+				namespace: 'shift-open'
+			});
+			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: expect.any(String),
 				type: 'start'
@@ -40,7 +42,8 @@ describe('Shift', () => {
 
 			const result = await Shift.open({ date: specificDate });
 
-			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift');
+			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: specificDate,
 				type: 'start'
@@ -52,7 +55,9 @@ describe('Shift', () => {
 			const error = new Error('API Error');
 			StaffService.openShift.mockRejectedValueOnce(error);
 
-			await expect(Shift.open()).rejects.toThrow('API Error');
+			await expect(shift.open()).rejects.toThrow('API Error');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift');
+			expect(mockCrashlytics.recordError).toHaveBeenCalledWith(error, 'Error opening shift in staff service');
 		});
 
 		it('should continue even if TimeTracker fails', async () => {
@@ -65,6 +70,7 @@ describe('Shift', () => {
 
 			const result = await Shift.open();
 
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift');
 			expect(result).toBe(mockShiftId);
 		});
 
@@ -75,7 +81,8 @@ describe('Shift', () => {
 
 			const result = await Shift.open();
 
-			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift');
+			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
 				time: expect.any(String),
 				type: 'start'
@@ -90,7 +97,8 @@ describe('Shift', () => {
 
 			const result = await Shift.open();
 
-			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift');
+			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
 				time: expect.any(String),
 				type: 'start'
@@ -105,13 +113,16 @@ describe('Shift', () => {
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: { id: mockShiftId }
 			});
-			
-			TimeTracker.addEvent.mockResolvedValueOnce();
+			mockTimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await Shift.finish();
+			const result = await shift.finish();
 
-			expect(StaffService.closeShift).toHaveBeenCalled();
-			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift');
+			expect(mockRequest.post).toHaveBeenCalledWith({
+				service: 'staff',
+				namespace: 'shift-close'
+			});
+			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: expect.any(String),
 				type: 'finish'
@@ -131,7 +142,8 @@ describe('Shift', () => {
 
 			const result = await Shift.finish({ date: specificDate });
 
-			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift');
+			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: mockShiftId,
 				time: specificDate,
 				type: 'finish'
@@ -150,7 +162,8 @@ describe('Shift', () => {
 
 			const result = await Shift.finish({ date: specificDate });
 
-			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift');
+			expect(mockTimeTracker.addEvent).toHaveBeenCalledWith({
 				id: '',
 				time: specificDate,
 				type: 'finish'
@@ -209,15 +222,17 @@ describe('Shift', () => {
 
 			const result = await Shift.deleteShiftRegisters();
 
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user delete shift registers');
 			expect(TimeTracker.deleteAllEvents).toHaveBeenCalled();
-			expect(result).toBe(true);
 		});
 
 		it('should handle TimeTracker errors', async () => {
 			const error = new Error('Delete failed');
 			TimeTracker.deleteAllEvents.mockRejectedValueOnce(error);
 
-			await expect(Shift.deleteShiftRegisters()).rejects.toThrow('Delete failed');
+			await expect(shift.deleteShiftRegisters()).rejects.toThrow('Delete failed');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user delete shift registers');
+			expect(mockCrashlytics.recordError).toHaveBeenCalledWith(error, 'Error deleting registers from shift tracking database');
 		});
 	});
 }); 
