@@ -49,7 +49,7 @@ module.exports = {
 		'arrow-body-style': 'off',
 		'prefer-const': 'error',
 		'no-var': 'error',
-		'consistent-return': 'off',
+		'consistent-return': 'error',
 		// Reglas específicas para React
 		'react/function-component-definition': [
 			'error',
