@@ -132,7 +132,7 @@ describe('ShiftTrackingProvider', () => {
 		const spyOpen = jest.spyOn(Shift, 'open').mockResolvedValueOnce('shift-123');
 
 		render(
-			<ShiftTrackingProvider environment="test">
+			<ShiftTrackingProvider>
 				<div>Test Child</div>
 			</ShiftTrackingProvider>
 		);
