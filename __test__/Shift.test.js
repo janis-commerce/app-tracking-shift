@@ -1,13 +1,12 @@
 import Shift from '../lib/Shift';
 import {mockCrashlytics} from '../__mocks__';
+import StaffService from '../lib/StaffApiServices';
+import TimeTracker from '../lib/db/TimeTrackerService';
 
 describe('Shift', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 	});
-
-	const StaffService = require('../lib/StaffApiServices');
-	const TimeTracker = require('../lib/db/TimeTrackerService');
 
 	describe('open', () => {
 		it('should start a shift successfully', async () => {

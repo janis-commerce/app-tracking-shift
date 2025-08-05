@@ -2,6 +2,8 @@ import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
 import Shift from '../lib/Shift';
+import Crashlytics from '../lib/utils/crashlytics';
+import getUserId from '../lib/utils/userInfo/getUserId';
 
 jest.mock('../lib/utils/userInfo/getUserId', () => jest.fn());
 
@@ -18,13 +20,8 @@ jest.mock('../lib/context/ShiftTrackingContext', () => ({
 }));
 
 describe('ShiftTrackingProvider', () => {
-	let getUserId;
-	let Crashlytics;
-
 	beforeEach(() => {
 		jest.clearAllMocks();
-		getUserId = require('../lib/utils/userInfo/getUserId');
-		Crashlytics = require('../lib/utils/crashlytics');
 	});
 
 	it('should open shift when no userId is available and log the action', async () => {
