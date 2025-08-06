@@ -1,4 +1,5 @@
 import Shift from '../lib/Shift';
+import {worklogTypes, parsedWorklogTypes} from '../__mocks__/worklogTypes';
 import {mockCrashlytics} from '../__mocks__';
 import StaffService from '../lib/StaffApiServices';
 import TimeTracker from '../lib/db/TimeTrackerService';
@@ -216,9 +217,126 @@ describe('Shift', () => {
 			const error = new Error('Get shifts list failed');
 			StaffService.getShiftsList.mockRejectedValueOnce(error);
 
-			await expect(Shift.getUserOpenShift({userId: 'user-123'})).rejects.toThrow(
-				'Get shifts list failed'
-			);
+			await expect(Shift.getUserOpenShift({userId: 'user-123'})).rejects.toThrow(error);
+		});
+	});
+
+	describe('fetchWorklogTypes', () => {
+		it('should fetch worklog types successfully', async () => {
+			StaffService.getWorkLogTypes.mockResolvedValueOnce({
+				result: worklogTypes,
+			});
+
+			const result = await Shift.fetchWorklogTypes();
+
+			expect(StaffService.getWorkLogTypes).toHaveBeenCalled();
+			expect(result).toEqual(parsedWorklogTypes);
+		});
+
+		it('should handle empty worklog types response', async () => {
+			StaffService.getWorkLogTypes.mockResolvedValueOnce({
+				result: undefined,
+			});
+
+			const result = await Shift.fetchWorklogTypes();
+
+			expect(result).toEqual([]);
+		});
+
+		it('should filter out worklog types without id or referenceId', async () => {
+			const mockWorklogTypes = [
+				...worklogTypes,
+				{
+					id: 'type-4',
+					referenceId: 'ref-4',
+					name: 'Trabajo Mínimo',
+				},
+			];
+
+			StaffService.getWorkLogTypes.mockResolvedValueOnce({
+				result: mockWorklogTypes,
+			});
+
+			const result = await Shift.fetchWorklogTypes();
+
+			expect(result).toEqual([
+				...parsedWorklogTypes,
+				{
+					id: 'type-4',
+					referenceId: 'ref-4',
+					worklogName: 'Trabajo Mínimo',
+					type: '',
+					description: '',
+					suggestedTime: 0,
+				},
+			]);
+		});
+
+		it('should handle staff service errors', async () => {
+			const error = new Error('API Error');
+			StaffService.getWorkLogTypes.mockRejectedValueOnce(error);
+
+			await expect(Shift.fetchWorklogTypes()).rejects.toThrow('API Error');
+		});
+	});
+
+	describe('fetchWorklogTypes', () => {
+		it('should fetch worklog types successfully', async () => {
+			StaffService.getWorkLogTypes.mockResolvedValueOnce({
+				result: worklogTypes,
+			});
+
+			const result = await Shift.fetchWorklogTypes();
+
+			expect(StaffService.getWorkLogTypes).toHaveBeenCalled();
+
+			expect(result).toEqual(parsedWorklogTypes);
+		});
+
+		it('should handle empty worklog types response', async () => {
+			StaffService.getWorkLogTypes.mockResolvedValueOnce({
+				result: undefined,
+			});
+
+			const result = await Shift.fetchWorklogTypes();
+
+			expect(result).toEqual([]);
+		});
+
+		it('should filter out worklog types without id or referenceId', async () => {
+			const mockWorklogTypes = [
+				...worklogTypes,
+				{
+					id: 'type-4',
+					referenceId: 'ref-4',
+					name: 'Trabajo Mínimo',
+				},
+			];
+
+			StaffService.getWorkLogTypes.mockResolvedValueOnce({
+				result: mockWorklogTypes,
+			});
+
+			const result = await Shift.fetchWorklogTypes();
+
+			expect(result).toEqual([
+				...parsedWorklogTypes,
+				{
+					id: 'type-4',
+					referenceId: 'ref-4',
+					worklogName: 'Trabajo Mínimo',
+					type: '',
+					description: '',
+					suggestedTime: 0,
+				},
+			]);
+		});
+
+		it('should handle staff service errors', async () => {
+			const error = new Error('API Error');
+			StaffService.getWorkLogTypes.mockRejectedValueOnce(error);
+
+			await expect(Shift.fetchWorklogTypes()).rejects.toThrow('API Error');
 		});
 	});
 

@@ -72,6 +72,8 @@ jest.mock('../lib/StaffApiServices', () => ({
 	openShift: jest.fn(),
 	closeShift: jest.fn(),
 	getShiftsList: jest.fn(),
+	getWorkLogTypes: jest.fn(),
+	postWorklog: jest.fn(),
 }));
 
 // Mock TimeTracker
