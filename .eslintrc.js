@@ -62,6 +62,8 @@ module.exports = {
 		'react/prop-types': 'off',
 		'react/require-default-props': 'off',
 		'react/default-props-match-prop-types': 'off',
+		// Desactivar validaciones de class-methods-use-this
+		'class-methods-use-this': 'off',
 	},
 	settings: {
 		'import/resolver': {

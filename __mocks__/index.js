@@ -22,3 +22,17 @@ export const mockCrashlytics = {
 	setCrashlyticsCollectionEnabled: jest.fn(),
 	isCrashlyticsCollectionEnabled: true,
 };
+
+// Mock para react-native-mmkv
+export const mockMMKV = {
+	set: jest.fn(),
+	getString: jest.fn(),
+	getNumber: jest.fn(),
+	getBoolean: jest.fn(),
+	getObject: jest.fn(),
+	delete: jest.fn(),
+	clearAll: jest.fn(),
+	contains: jest.fn(),
+	getAllKeys: jest.fn(() => []),
+	recursiveDelete: jest.fn(),
+};
