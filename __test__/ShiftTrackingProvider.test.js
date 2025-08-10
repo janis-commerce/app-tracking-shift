@@ -11,8 +11,6 @@ jest.mock('../lib/utils/provider', () => ({
 	downloadWorkLogTypes: jest.fn(),
 }));
 
-// No mockear el contexto para poder testear los valores reales
-
 describe('ShiftTrackingProvider', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
