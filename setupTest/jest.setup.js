@@ -92,4 +92,30 @@ jest.mock('../lib/db/StorageService', () => ({
 jest.mock('react-native-mmkv', () => ({
 	__esModule: true,
 	MMKV: jest.fn().mockImplementation(() => mockMMKV),
+	useMMKVString: jest.fn((key) => {
+		// Retorna un array con el valor y el setter, simulando el comportamiento real del hook
+		const mockValue = mockMMKV.getString(key) || null;
+		const mockSetter = jest.fn();
+		return [mockValue, mockSetter];
+	}),
+}));
+
+// Mock useMMKVObject hook
+jest.mock('../lib/hooks/useMMKVObject', () => ({
+	__esModule: true,
+	useMMKVObject: jest.fn((key, defaultValue = null) => {
+		// Simula el comportamiento del hook personalizado
+		const rawValue = mockMMKV.getString(key);
+		let parsedValue = defaultValue;
+
+		if (rawValue) {
+			try {
+				parsedValue = JSON.parse(rawValue);
+			} catch (e) {
+				parsedValue = defaultValue;
+			}
+		}
+
+		return [parsedValue];
+	}),
 }));

@@ -1,34 +1,42 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
-import Shift from '../lib/Shift';
-import Crashlytics from '../lib/utils/crashlytics';
-import getUserId from '../lib/utils/userInfo/getUserId';
+import {openShift, downloadWorkLogTypes} from '../lib/utils/provider';
+import {mockMMKV} from '../__mocks__';
+import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 
-jest.mock('../lib/utils/userInfo/getUserId', () => jest.fn());
-
-jest.mock('../lib/utils/crashlytics', () => ({
-	log: jest.fn(),
-	recordError: jest.fn(),
+// Mock de las funciones provider
+jest.mock('../lib/utils/provider', () => ({
+	openShift: jest.fn(),
+	downloadWorkLogTypes: jest.fn(),
 }));
 
-jest.mock('../lib/context/ShiftTrackingContext', () => ({
-	__esModule: true,
-	default: {
-		Provider: ({children}) => <div data-testid="context-provider">{children}</div>,
-	},
-}));
+// No mockear el contexto para poder testear los valores reales
 
 describe('ShiftTrackingProvider', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Resetear los valores del mock storage
+		mockMMKV.getString.mockImplementation((key) => {
+			const mockData = {
+				'shift.status': 'opened',
+				'shift.id': 'shift-123',
+				'worklog.id': 'worklog-456',
+				'shift.data': JSON.stringify({
+					id: 'shift-123',
+					status: 'opened',
+					startTime: '2023-01-01T10:00:00Z',
+				}),
+				'worklogTypes.data': JSON.stringify({
+					workLogTypes: [{id: 1, name: 'Test Type', referenceId: 'ref-123'}],
+				}),
+				'worklog.data': JSON.stringify({id: 'worklog-456', type: 'test'}),
+			};
+			return mockData[key] || null;
+		});
 	});
 
-	it('should open shift when no userId is available and log the action', async () => {
-		getUserId.mockResolvedValueOnce(null);
-
-		const spyOpen = jest.spyOn(Shift, 'open').mockResolvedValueOnce('shift-123');
-
+	it('should call openShift and downloadWorkLogTypes on mount', async () => {
 		render(
 			<ShiftTrackingProvider>
 				<div>Test Child</div>
@@ -36,59 +44,14 @@ describe('ShiftTrackingProvider', () => {
 		);
 
 		await waitFor(() => {
-			expect(getUserId).toHaveBeenCalled();
-			expect(spyOpen).toHaveBeenCalled();
-			expect(Crashlytics.log).toHaveBeenCalledWith('open shift by provider');
+			expect(openShift).toHaveBeenCalledTimes(1);
+			expect(openShift).toHaveBeenCalledWith(null);
+			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
 		});
 	});
 
-	it('should open shift when user has no open shift', async () => {
-		getUserId.mockResolvedValueOnce('user-123');
-
-		const spyGetUserOpenShift = jest.spyOn(Shift, 'getUserOpenShift').mockResolvedValueOnce({});
-		const spyOpen = jest.spyOn(Shift, 'open').mockResolvedValueOnce('shift-123');
-
-		render(
-			<ShiftTrackingProvider>
-				<div>Test Child</div>
-			</ShiftTrackingProvider>
-		);
-
-		await waitFor(() => {
-			expect(getUserId).toHaveBeenCalled();
-			expect(spyGetUserOpenShift).toHaveBeenCalledWith({userId: 'user-123'});
-			expect(spyOpen).toHaveBeenCalled();
-		});
-	});
-
-	it('should not open shift when user already has an open shift', async () => {
-		getUserId.mockResolvedValueOnce('user-123');
-
-		const mockCurrentShift = {id: 'shift-123', status: 'opened'};
-		const spyGetUserOpenShift = jest
-			.spyOn(Shift, 'getUserOpenShift')
-			.mockResolvedValueOnce(mockCurrentShift);
-		const spyOpen = jest.spyOn(Shift, 'open').mockResolvedValueOnce('shift-123');
-
-		render(
-			<ShiftTrackingProvider>
-				<div>Test Child</div>
-			</ShiftTrackingProvider>
-		);
-
-		await waitFor(() => {
-			expect(getUserId).toHaveBeenCalled();
-			expect(spyGetUserOpenShift).toHaveBeenCalledWith({userId: 'user-123'});
-			expect(spyOpen).not.toHaveBeenCalled();
-		});
-	});
-
-	it('should handle errors when opening shift - with callback provided', async () => {
-		getUserId.mockResolvedValueOnce('user-123');
-
-		const mockError = new Error('Error opening shift');
-		jest.spyOn(Shift, 'getUserOpenShift').mockRejectedValueOnce(mockError);
-		const onOpenShiftError = jest.fn().mockReturnValueOnce('error-handled');
+	it('should call openShift with error callback when provided', async () => {
+		const onOpenShiftError = jest.fn();
 
 		render(
 			<ShiftTrackingProvider onOpenShiftError={onOpenShiftError}>
@@ -97,50 +60,93 @@ describe('ShiftTrackingProvider', () => {
 		);
 
 		await waitFor(() => {
-			expect(Crashlytics.recordError).toHaveBeenCalledWith(
-				mockError,
-				'Error opening shift in staff service'
-			);
-			expect(onOpenShiftError).toHaveBeenCalledWith(mockError);
+			expect(openShift).toHaveBeenCalledTimes(1);
+			expect(openShift).toHaveBeenCalledWith(onOpenShiftError);
+			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
 		});
 	});
 
-	it('should handle errors when opening shift - without callback provided', async () => {
-		getUserId.mockResolvedValueOnce('user-123');
+	it('should provide context values from storage', async () => {
+		let contextValue;
 
-		const mockError = new Error('Error opening shift');
-		jest.spyOn(Shift, 'getUserOpenShift').mockRejectedValueOnce(mockError);
+		const TestComponent = () => {
+			contextValue = React.useContext(ShiftTrackingContext);
+			return (
+				<div data-testid="test-component">
+					{contextValue?.shiftId && <span data-testid="shift-id">{contextValue.shiftId}</span>}
+					{contextValue?.shiftStatus && (
+						<span data-testid="shift-status">{contextValue.shiftStatus}</span>
+					)}
+				</div>
+			);
+		};
 
-		render(
+		const {getByTestId} = render(
 			<ShiftTrackingProvider>
-				<div>Test Child</div>
+				<TestComponent />
 			</ShiftTrackingProvider>
 		);
 
 		await waitFor(() => {
-			expect(Crashlytics.recordError).toHaveBeenCalledWith(
-				mockError,
-				'Error opening shift in staff service'
-			);
+			expect(getByTestId('test-component')).toBeDefined();
+			expect(contextValue).toBeDefined();
+			expect(contextValue.shiftId).toBe('shift-123');
+			expect(contextValue.shiftStatus).toBe('opened');
 		});
 	});
 
-	it('should log to crashlytics when shift opens successfully', async () => {
-		getUserId.mockResolvedValueOnce('user-123');
+	it('should render onPausedShift when shiftStatus is paused and callback is provided', async () => {
+		mockMMKV.getString.mockImplementation((key) => {
+			if (key === 'shift.status') return 'paused';
+			return null;
+		});
 
-		jest.spyOn(Shift, 'getUserOpenShift').mockResolvedValueOnce({});
-		const spyOpen = jest.spyOn(Shift, 'open').mockResolvedValueOnce('shift-123');
-
-		render(
-			<ShiftTrackingProvider>
-				<div>Test Child</div>
+		const {getByTestId} = render(
+			<ShiftTrackingProvider onPausedShift={<div data-testid="paused-component">Shift Paused</div>}>
+				<div>Normal Child</div>
 			</ShiftTrackingProvider>
 		);
 
 		await waitFor(() => {
-			expect(spyOpen).toHaveBeenCalledTimes(1);
-			expect(Crashlytics.log).toHaveBeenCalledWith('open shift by provider');
-			expect(Crashlytics.recordError).not.toHaveBeenCalled();
+			expect(getByTestId('paused-component')).toBeDefined();
+		});
+	});
+
+	it('should render children normally when shiftStatus is not paused', async () => {
+		const {getByText} = render(
+			<ShiftTrackingProvider>
+				<div>Normal Child</div>
+			</ShiftTrackingProvider>
+		);
+
+		await waitFor(() => {
+			expect(getByText('Normal Child')).toBeDefined();
+		});
+	});
+
+	it('should handle empty storage values gracefully', async () => {
+		// Configurar storage vacío
+		mockMMKV.getString.mockReturnValue(null);
+
+		let contextValue;
+
+		const TestComponent = () => {
+			contextValue = React.useContext(ShiftTrackingContext);
+			return <div data-testid="empty-test">Test</div>;
+		};
+
+		const {getByTestId} = render(
+			<ShiftTrackingProvider>
+				<TestComponent />
+			</ShiftTrackingProvider>
+		);
+
+		await waitFor(() => {
+			expect(getByTestId('empty-test')).toBeDefined();
+			expect(contextValue).toBeDefined();
+			expect(contextValue.shiftId).toBeNull();
+			expect(contextValue.shiftStatus).toBeNull();
+			expect(contextValue.workLogTypes).toEqual([]);
 		});
 	});
 });
