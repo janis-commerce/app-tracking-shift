@@ -93,14 +93,15 @@ describe('ShiftTrackingProvider', () => {
 		});
 	});
 
-	it('should render onPausedShift when shiftStatus is paused and callback is provided', async () => {
+	it('should render pausedShiftComponent when shiftStatus is paused and callback is provided', async () => {
 		mockMMKV.getString.mockImplementation((key) => {
 			if (key === 'shift.status') return 'paused';
 			return null;
 		});
 
 		const {getByTestId} = render(
-			<ShiftTrackingProvider onPausedShift={<div data-testid="paused-component">Shift Paused</div>}>
+			<ShiftTrackingProvider
+				pausedShiftComponent={<div data-testid="paused-component">Shift Paused</div>}>
 				<div>Normal Child</div>
 			</ShiftTrackingProvider>
 		);
