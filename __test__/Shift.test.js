@@ -1,6 +1,6 @@
 import Shift from '../lib/Shift';
 import {worklogTypes, parsedWorklogTypes} from '../__mocks__/worklogTypes';
-import {mockCrashlytics, mockMMKV} from '../__mocks__';
+import {mockCrashlytics} from '../__mocks__';
 import StaffService from '../lib/StaffApiServices';
 import TimeTracker from '../lib/db/TimeTrackerService';
 import {
@@ -223,20 +223,23 @@ describe('Shift', () => {
 
 	describe('pause', () => {
 		it('should pause a shift successfully', () => {
-			const result = Shift.pause();
+			const [result, error] = Shift.pause();
 
 			expect(mockCrashlytics.log).toHaveBeenCalled();
-			expect(mockMMKV.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
 			expect(result).toBeNull();
+			expect(error).toBeNull();
 		});
 
 		it('should handle errors during pause', () => {
 			const error = new Error('Storage error');
-			mockMMKV.set.mockImplementationOnce(() => {
+			Storage.set.mockImplementationOnce(() => {
 				throw error;
 			});
 
-			expect(() => Shift.pause()).rejects.toThrow('Storage error');
+			const [result, returnedError] = Shift.pause();
+			expect(result).toBeNull();
+			expect(returnedError).toBe(error);
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
@@ -244,20 +247,23 @@ describe('Shift', () => {
 
 	describe('resume', () => {
 		it('should resume a shift successfully', () => {
-			const result = Shift.resume();
+			const [result, error] = Shift.resume();
 
 			expect(mockCrashlytics.log).toHaveBeenCalled();
-			expect(mockMMKV.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened');
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened');
 			expect(result).toBeNull();
+			expect(error).toBeNull();
 		});
 
 		it('should handle errors during resume', () => {
 			const error = new Error('Storage error');
-			mockMMKV.set.mockImplementationOnce(() => {
+			Storage.set.mockImplementationOnce(() => {
 				throw error;
 			});
 
-			expect(() => Shift.resume()).rejects.toThrow('Storage error');
+			const [result, returnedError] = Shift.resume();
+			expect(result).toBeNull();
+			expect(returnedError).toBe(error);
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
