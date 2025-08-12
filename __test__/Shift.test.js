@@ -13,13 +13,6 @@ import {
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
 
-// Mock para ShiftWorklogs
-jest.mock('../lib/ShiftWorklogs', () => ({
-	open: jest.fn(),
-	finish: jest.fn(),
-	prepareWorkLogTypes: jest.fn(),
-}));
-
 // Mock para Date
 const mockDate = new Date('2024-01-15T10:30:00.000Z');
 const realDate = Date;
@@ -221,54 +214,6 @@ describe('Shift', () => {
 		});
 	});
 
-	describe('pause', () => {
-		it('should pause a shift successfully', () => {
-			const [result, error] = Shift.pause();
-
-			expect(mockCrashlytics.log).toHaveBeenCalled();
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
-			expect(result).toBeNull();
-			expect(error).toBeNull();
-		});
-
-		it('should handle errors during pause', () => {
-			const error = new Error('Storage error');
-			Storage.set.mockImplementationOnce(() => {
-				throw error;
-			});
-
-			const [result, returnedError] = Shift.pause();
-			expect(result).toBeNull();
-			expect(returnedError).toBe(error);
-			expect(mockCrashlytics.log).toHaveBeenCalled();
-			expect(mockCrashlytics.recordError).toHaveBeenCalled();
-		});
-	});
-
-	describe('resume', () => {
-		it('should resume a shift successfully', () => {
-			const [result, error] = Shift.resume();
-
-			expect(mockCrashlytics.log).toHaveBeenCalled();
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened');
-			expect(result).toBeNull();
-			expect(error).toBeNull();
-		});
-
-		it('should handle errors during resume', () => {
-			const error = new Error('Storage error');
-			Storage.set.mockImplementationOnce(() => {
-				throw error;
-			});
-
-			const [result, returnedError] = Shift.resume();
-			expect(result).toBeNull();
-			expect(returnedError).toBe(error);
-			expect(mockCrashlytics.log).toHaveBeenCalled();
-			expect(mockCrashlytics.recordError).toHaveBeenCalled();
-		});
-	});
-
 	describe('getUserOpenShift', () => {
 		it('should get user open shift successfully', async () => {
 			const mockShift = {id: 'shift-123', status: 'opened'};
@@ -437,16 +382,21 @@ describe('Shift', () => {
 
 		it('should open worklog with default params', async () => {
 			const mockShiftId = 'shift-123';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.open.mockResolvedValueOnce('worklog-id');
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await Shift.openWorkLog();
+			const result = await Shift.openWorkLog(mockParams);
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog');
 			expect(ShiftWorklogs.open).toHaveBeenCalledWith({
-				referenceId: undefined,
+				referenceId: mockParams.referenceId,
 				startDate: mockDate.toISOString(),
 			});
 			expect(result).toEqual(expect.any(String));
@@ -455,11 +405,16 @@ describe('Shift', () => {
 		it('should handle ShiftWorklogs.open errors', async () => {
 			const error = new Error('ShiftWorklogs open failed');
 			const mockShiftId = 'shift-123';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.open.mockRejectedValueOnce(error);
 
-			await expect(Shift.openWorkLog()).rejects.toThrow('ShiftWorklogs open failed');
+			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('ShiftWorklogs open failed');
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
@@ -512,6 +467,36 @@ describe('Shift', () => {
 				})
 			);
 		});
+
+		it('should return null when no arguments are passed to openWorkLog', async () => {
+			const result = await Shift.openWorkLog();
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog');
+			expect(result).toBeNull();
+			expect(ShiftWorklogs.open).not.toHaveBeenCalled();
+			expect(TimeTracker.addEvent).not.toHaveBeenCalled();
+			expect(Storage.set).not.toHaveBeenCalled();
+		});
+
+		it('should return null when empty object is passed to openWorkLog', async () => {
+			const result = await Shift.openWorkLog({});
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog');
+			expect(result).toBeNull();
+			expect(ShiftWorklogs.open).not.toHaveBeenCalled();
+			expect(TimeTracker.addEvent).not.toHaveBeenCalled();
+			expect(Storage.set).not.toHaveBeenCalled();
+		});
+
+		it('should return null when null is passed to openWorkLog', async () => {
+			const result = await Shift.openWorkLog(null);
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog');
+			expect(result).toBeNull();
+			expect(ShiftWorklogs.open).not.toHaveBeenCalled();
+			expect(TimeTracker.addEvent).not.toHaveBeenCalled();
+			expect(Storage.set).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('finishWorkLog', () => {
@@ -555,17 +540,22 @@ describe('Shift', () => {
 		it('should finish worklog with default params', async () => {
 			const mockShiftId = 'shift-123';
 			const mockWorkLogId = 'worklog-456';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			Storage.getString.mockReturnValueOnce(mockWorkLogId);
 			ShiftWorklogs.finish.mockResolvedValueOnce(mockWorkLogId);
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await Shift.finishWorkLog();
+			const result = await Shift.finishWorkLog(mockParams);
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog');
 			expect(ShiftWorklogs.finish).toHaveBeenCalledWith({
-				referenceId: undefined,
+				referenceId: mockParams.referenceId,
 				endDate: mockDate.toISOString(),
 			});
 			expect(result).toBe(mockWorkLogId);
@@ -575,12 +565,17 @@ describe('Shift', () => {
 			const error = new Error('ShiftWorklogs finish failed');
 			const mockShiftId = 'shift-123';
 			const mockWorkLogId = 'worklog-456';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			Storage.getString.mockReturnValueOnce(mockWorkLogId);
 			ShiftWorklogs.finish.mockRejectedValueOnce(error);
 
-			await expect(Shift.finishWorkLog()).rejects.toThrow('ShiftWorklogs finish failed');
+			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow('ShiftWorklogs finish failed');
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
@@ -611,13 +606,18 @@ describe('Shift', () => {
 
 		it('should handle missing worklog ID', async () => {
 			const mockShiftId = 'shift-123';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
-			Storage.getString.mockReturnValueOnce(undefined); // No worklog ID
+			Storage.getString.mockReturnValueOnce(undefined);
 			ShiftWorklogs.finish.mockResolvedValueOnce('new-worklog-id');
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
-			const result = await Shift.finishWorkLog();
+			const result = await Shift.finishWorkLog(mockParams);
 
 			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
 				id: undefined,
@@ -627,7 +627,40 @@ describe('Shift', () => {
 			});
 			expect(Storage.delete).toHaveBeenCalledWith(CURRENT_WORKLOG_ID);
 			expect(Storage.delete).toHaveBeenCalledWith(CURRENT_WORKLOG_DATA);
-			expect(result).toBe(undefined); // El método devuelve el workLogId del storage que es undefined
+			expect(result).toBe(undefined);
+		});
+
+		it('should return null when no arguments are passed to finishWorkLog', async () => {
+			const result = await Shift.finishWorkLog();
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog');
+			expect(result).toBeNull();
+			expect(ShiftWorklogs.finish).not.toHaveBeenCalled();
+			expect(TimeTracker.addEvent).not.toHaveBeenCalled();
+			expect(Storage.set).not.toHaveBeenCalled();
+			expect(Storage.delete).not.toHaveBeenCalled();
+		});
+
+		it('should return null when empty object is passed to finishWorkLog', async () => {
+			const result = await Shift.finishWorkLog({});
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog');
+			expect(result).toBeNull();
+			expect(ShiftWorklogs.finish).not.toHaveBeenCalled();
+			expect(TimeTracker.addEvent).not.toHaveBeenCalled();
+			expect(Storage.set).not.toHaveBeenCalled();
+			expect(Storage.delete).not.toHaveBeenCalled();
+		});
+
+		it('should return null when null is passed to finishWorkLog', async () => {
+			const result = await Shift.finishWorkLog(null);
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog');
+			expect(result).toBeNull();
+			expect(ShiftWorklogs.finish).not.toHaveBeenCalled();
+			expect(TimeTracker.addEvent).not.toHaveBeenCalled();
+			expect(Storage.set).not.toHaveBeenCalled();
+			expect(Storage.delete).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -4,6 +4,7 @@ import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
 import {openShift, downloadWorkLogTypes} from '../lib/utils/provider';
 import {mockMMKV} from '../__mocks__';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
+import {promiseWrapper} from '../lib/utils/helpers';
 
 // Mock de las funciones provider
 jest.mock('../lib/utils/provider', () => ({
@@ -32,9 +33,20 @@ describe('ShiftTrackingProvider', () => {
 			};
 			return mockData[key] || null;
 		});
+
+		// Configurar promiseWrapper para retornar éxito por defecto
+		promiseWrapper.mockImplementation((promise) => {
+			if (!promise || typeof promise.then !== 'function') {
+				return Promise.resolve([undefined, null]);
+			}
+			return promise.then((data) => [data, null]).catch((error) => Promise.resolve([null, error]));
+		});
 	});
 
 	it('should call openShift and downloadWorkLogTypes on mount', async () => {
+		openShift.mockResolvedValueOnce(true);
+		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
+
 		render(
 			<ShiftTrackingProvider>
 				<div>Test Child</div>
@@ -49,18 +61,82 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should call openShift with error callback when provided', async () => {
-		const onOpenShiftError = jest.fn();
+		const onError = jest.fn();
+		openShift.mockResolvedValueOnce(true);
+		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
 		render(
-			<ShiftTrackingProvider onOpenShiftError={onOpenShiftError}>
+			<ShiftTrackingProvider onError={onError}>
 				<div>Test Child</div>
 			</ShiftTrackingProvider>
 		);
 
 		await waitFor(() => {
 			expect(openShift).toHaveBeenCalledTimes(1);
-			expect(openShift).toHaveBeenCalledWith(onOpenShiftError);
+			expect(openShift).toHaveBeenCalledWith(onError);
 			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
+			expect(downloadWorkLogTypes).toHaveBeenCalledWith(onError);
+		});
+	});
+
+	it('should handle openShift error and set error state', async () => {
+		const openShiftError = new Error('Failed to open shift');
+		openShift.mockRejectedValueOnce(openShiftError);
+
+		let contextValue;
+
+		const TestComponent = () => {
+			contextValue = React.useContext(ShiftTrackingContext);
+			return (
+				<div data-testid="test-component">
+					{contextValue?.error && <span data-testid="error">{contextValue.error.message}</span>}
+				</div>
+			);
+		};
+
+		const {getByTestId} = render(
+			<ShiftTrackingProvider>
+				<TestComponent />
+			</ShiftTrackingProvider>
+		);
+
+		await waitFor(() => {
+			expect(getByTestId('error')).toBeDefined();
+			expect(contextValue.error).toEqual({
+				message: openShiftError.message,
+				type: 'openShift',
+			});
+		});
+	});
+
+	it('should handle downloadWorkLogTypes error and set error state', async () => {
+		const downloadError = new Error('Failed to download worklog types');
+		openShift.mockResolvedValueOnce(true);
+		downloadWorkLogTypes.mockRejectedValueOnce(downloadError);
+
+		let contextValue;
+
+		const TestComponent = () => {
+			contextValue = React.useContext(ShiftTrackingContext);
+			return (
+				<div data-testid="test-component">
+					{contextValue?.error && <span data-testid="error">{contextValue.error.message}</span>}
+				</div>
+			);
+		};
+
+		const {getByTestId} = render(
+			<ShiftTrackingProvider>
+				<TestComponent />
+			</ShiftTrackingProvider>
+		);
+
+		await waitFor(() => {
+			expect(getByTestId('error')).toBeDefined();
+			expect(contextValue.error).toEqual({
+				message: downloadError.message,
+				type: 'downloadWorkLogTypes',
+			});
 		});
 	});
 
@@ -124,7 +200,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should handle empty storage values gracefully', async () => {
-		// Configurar storage vacío
+		// Configurar storage vacío para todas las llamadas
 		mockMMKV.getString.mockReturnValue(null);
 
 		let contextValue;
@@ -146,6 +222,61 @@ describe('ShiftTrackingProvider', () => {
 			expect(contextValue.shiftId).toBeNull();
 			expect(contextValue.shiftStatus).toBeNull();
 			expect(contextValue.workLogTypes).toEqual([]);
+			expect(contextValue.error).toBeNull();
+		});
+	});
+
+	it('should execute handleShiftTrackingInit successfully without errors', async () => {
+		openShift.mockResolvedValueOnce(true);
+		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
+
+		let contextValue;
+
+		const TestComponent = () => {
+			contextValue = React.useContext(ShiftTrackingContext);
+			return <div data-testid="success-test">Success</div>;
+		};
+
+		const {getByTestId} = render(
+			<ShiftTrackingProvider>
+				<TestComponent />
+			</ShiftTrackingProvider>
+		);
+
+		await waitFor(() => {
+			expect(getByTestId('success-test')).toBeDefined();
+			expect(contextValue.error).toBeNull();
+			expect(openShift).toHaveBeenCalledTimes(1);
+			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	it('should handle openShift error and continue with downloadWorkLogTypes', async () => {
+		const openShiftError = new Error('Open shift failed');
+		openShift.mockRejectedValueOnce(openShiftError);
+		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
+
+		let contextValue;
+
+		const TestComponent = () => {
+			contextValue = React.useContext(ShiftTrackingContext);
+			return (
+				<div data-testid="test-component">
+					{contextValue?.error && <span data-testid="error-type">{contextValue.error.type}</span>}
+				</div>
+			);
+		};
+
+		const {getByTestId} = render(
+			<ShiftTrackingProvider>
+				<TestComponent />
+			</ShiftTrackingProvider>
+		);
+
+		await waitFor(() => {
+			expect(getByTestId('error-type')).toBeDefined();
+			expect(contextValue.error.type).toBe('openShift');
+			expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -76,6 +76,16 @@ jest.mock('../lib/StaffApiServices', () => ({
 	postWorklog: jest.fn(),
 }));
 
+// Mock ShiftWorklogs
+jest.mock('../lib/ShiftWorklogs', () => ({
+	__esModule: true,
+	default: {
+		open: jest.fn(),
+		finish: jest.fn(),
+		prepareWorkLogTypes: jest.fn(),
+	},
+}));
+
 // Mock TimeTracker
 jest.mock('../lib/db/TimeTrackerService', () => ({
 	addEvent: jest.fn(),
@@ -119,3 +129,13 @@ jest.mock('../lib/hooks/useMMKVObject', () => ({
 		return [parsedValue];
 	}),
 }));
+
+jest.mock('../lib/utils/helpers', () => {
+	const actualHelpers = jest.requireActual('../lib/utils/helpers');
+	return {
+		__esModule: true,
+		...actualHelpers,
+		generateRandomId: jest.fn(() => 'mock-random-id'),
+		promiseWrapper: jest.fn(),
+	};
+});
