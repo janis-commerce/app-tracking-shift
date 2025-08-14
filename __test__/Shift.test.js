@@ -663,4 +663,45 @@ describe('Shift', () => {
 			expect(Storage.delete).not.toHaveBeenCalled();
 		});
 	});
+
+	describe('checkStaffMSAuthorization', () => {
+		it('should return true when user is authorized', async () => {
+			StaffService.getStaffMSAuthorization.mockResolvedValueOnce({
+				result: true,
+			});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getStaffMSAuthorization).toHaveBeenCalled();
+			expect(result).toBe(true);
+		});
+
+		it('should return false when result is undefined', async () => {
+			StaffService.getStaffMSAuthorization.mockResolvedValueOnce({
+				result: undefined,
+			});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getStaffMSAuthorization).toHaveBeenCalled();
+			expect(result).toBe(false);
+		});
+
+		it('should return false when response has no result property', async () => {
+			StaffService.getStaffMSAuthorization.mockResolvedValueOnce({});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getStaffMSAuthorization).toHaveBeenCalled();
+			expect(result).toBe(false);
+		});
+
+		it('should handle staff service errors', async () => {
+			const error = new Error('Authorization check failed');
+			StaffService.getStaffMSAuthorization.mockRejectedValueOnce(error);
+
+			await expect(Shift.checkStaffMSAuthorization()).rejects.toThrow('Authorization check failed');
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+	});
 });
