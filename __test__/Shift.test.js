@@ -15,6 +15,7 @@ import {
 	SHIFT_DATA,
 	CURRENT_WORKLOG_ID,
 	CURRENT_WORKLOG_DATA,
+	EXCLUDED_WORKLOG_TYPES,
 } from '../lib/constant';
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
@@ -385,9 +386,10 @@ describe('Shift', () => {
 	});
 
 	describe('openWorkLog', () => {
-		it('should open worklog successfully', async () => {
+		it('should open worklog successfully and pause shift for normal activities', async () => {
 			const mockShiftId = 'shift-123';
 			const mockWorkLogId = 'worklog-456';
+			const mockFormattedId = 'ref-123-mock-random-id';
 			const mockParams = {
 				referenceId: 'ref-123',
 				name: 'Test Work',
@@ -398,16 +400,18 @@ describe('Shift', () => {
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.open.mockResolvedValueOnce(mockWorkLogId);
 			TimeTracker.addEvent.mockResolvedValueOnce();
+			Formatter.formatWorkLogId.mockReturnValueOnce(mockFormattedId);
 
 			const result = await Shift.openWorkLog(mockParams);
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			expect(ShiftWorklogs.open).toHaveBeenCalledWith({
 				referenceId: mockParams.referenceId,
 				startDate: mockDate.toISOString(),
 			});
 			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
-				id: expect.any(String),
+				id: mockFormattedId,
 				time: mockDate.toISOString(),
 				type: 'start',
 				payload: {
@@ -417,16 +421,63 @@ describe('Shift', () => {
 					referenceId: mockParams.referenceId,
 				},
 			});
-			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, expect.any(String));
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, mockFormattedId);
 			expect(Storage.set).toHaveBeenCalledWith(
 				CURRENT_WORKLOG_DATA,
 				expect.stringContaining(mockParams.type)
 			);
-			expect(result).toEqual(expect.any(String));
+			expect(result).toEqual(mockFormattedId);
+		});
+
+		it('should open excluded worklog types without pausing shift', async () => {
+			const mockShiftId = 'shift-123';
+			const mockWorkLogId = 'worklog-456';
+			const mockFormattedId = 'picking-mock-random-id';
+			const mockParams = {
+				referenceId: EXCLUDED_WORKLOG_TYPES[0], // 'default-picking-work'
+				name: 'Picking Work',
+				type: 'work',
+				suggestedTime: 30,
+			};
+
+			Storage.getString.mockReturnValueOnce(mockShiftId);
+			ShiftWorklogs.open.mockResolvedValueOnce(mockWorkLogId);
+			TimeTracker.addEvent.mockResolvedValueOnce();
+			Formatter.formatWorkLogId.mockReturnValueOnce(mockFormattedId);
+
+			const result = await Shift.openWorkLog(mockParams);
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
+			expect(ShiftWorklogs.open).toHaveBeenCalledWith({
+				referenceId: mockParams.referenceId,
+				startDate: mockDate.toISOString(),
+			});
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+				id: mockFormattedId,
+				time: mockDate.toISOString(),
+				type: 'start',
+				payload: {
+					type: mockParams.type,
+					name: mockParams.name,
+					shiftId: mockShiftId,
+					referenceId: mockParams.referenceId,
+				},
+			});
+			// No debe pausar el turno para actividades excluidas
+			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, mockFormattedId);
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.stringContaining(mockParams.type)
+			);
+			expect(result).toEqual(mockFormattedId);
 		});
 
 		it('should open worklog with default params', async () => {
 			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
 			const mockParams = {
 				referenceId: 'ref-123',
 				name: 'Test Work',
@@ -436,20 +487,24 @@ describe('Shift', () => {
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.open.mockResolvedValueOnce('worklog-id');
 			TimeTracker.addEvent.mockResolvedValueOnce();
+			Formatter.formatWorkLogId.mockReturnValueOnce(mockFormattedId);
 
 			const result = await Shift.openWorkLog(mockParams);
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			expect(ShiftWorklogs.open).toHaveBeenCalledWith({
 				referenceId: mockParams.referenceId,
 				startDate: mockDate.toISOString(),
 			});
-			expect(result).toEqual(expect.any(String));
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
+			expect(result).toEqual(mockFormattedId);
 		});
 
 		it('should handle ShiftWorklogs.open errors', async () => {
 			const error = new Error('ShiftWorklogs open failed');
 			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
 			const mockParams = {
 				referenceId: 'ref-123',
 				name: 'Test Work',
@@ -457,15 +512,18 @@ describe('Shift', () => {
 			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
+			Formatter.formatWorkLogId.mockReturnValueOnce(mockFormattedId);
 			ShiftWorklogs.open.mockRejectedValueOnce(error);
 
 			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('ShiftWorklogs open failed');
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 
 		it('should continue even if TimeTracker fails', async () => {
 			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
 			const mockParams = {
 				referenceId: 'ref-123',
 				name: 'Test Work',
@@ -473,19 +531,23 @@ describe('Shift', () => {
 			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
+			Formatter.formatWorkLogId.mockReturnValueOnce(mockFormattedId);
 			ShiftWorklogs.open.mockResolvedValueOnce('worklog-id');
 			TimeTracker.addEvent.mockRejectedValueOnce(new Error('TimeTracker failed'));
 
 			const result = await Shift.openWorkLog(mockParams);
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			expect(ShiftWorklogs.open).toHaveBeenCalled();
 			expect(TimeTracker.addEvent).toHaveBeenCalled();
-			expect(result).toEqual(expect.any(String));
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
+			expect(result).toEqual(mockFormattedId);
 		});
 
 		it('should calculate suggested finish date correctly', async () => {
 			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
 			const mockParams = {
 				referenceId: 'ref-123',
 				name: 'Test Work',
@@ -494,12 +556,15 @@ describe('Shift', () => {
 			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
+			Formatter.formatWorkLogId.mockReturnValueOnce(mockFormattedId);
 			ShiftWorklogs.open.mockResolvedValueOnce('worklog-id');
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
 			await Shift.openWorkLog(mockParams);
 
 			const expectedFinishDate = new Date(mockDate.getTime() + 15 * 60 * 1000).toISOString();
+			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
 			expect(Storage.set).toHaveBeenCalledWith(
 				CURRENT_WORKLOG_DATA,
 				JSON.stringify({
@@ -547,6 +612,7 @@ describe('Shift', () => {
 	describe('finishWorkLog', () => {
 		it('should finish worklog successfully', async () => {
 			const mockShiftId = 'shift-123';
+			const mockShiftStatus = 'opened';
 			const mockWorkLogId = 'worklog-456';
 			const mockParams = {
 				referenceId: 'ref-123',
@@ -554,8 +620,9 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
-			Storage.getString.mockReturnValueOnce(mockShiftId);
-			Storage.getString.mockReturnValueOnce(mockWorkLogId);
+			Storage.getString.mockReturnValueOnce(mockShiftId); // SHIFT_ID
+			Storage.getString.mockReturnValueOnce(mockShiftStatus); // SHIFT_STATUS
+			Storage.getString.mockReturnValueOnce(mockWorkLogId); // CURRENT_WORKLOG_ID
 			ShiftWorklogs.finish.mockResolvedValueOnce(mockWorkLogId);
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
@@ -584,6 +651,7 @@ describe('Shift', () => {
 
 		it('should finish worklog with default params', async () => {
 			const mockShiftId = 'shift-123';
+			const mockShiftStatus = 'opened';
 			const mockWorkLogId = 'worklog-456';
 			const mockParams = {
 				referenceId: 'ref-123',
@@ -591,8 +659,9 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
-			Storage.getString.mockReturnValueOnce(mockShiftId);
-			Storage.getString.mockReturnValueOnce(mockWorkLogId);
+			Storage.getString.mockReturnValueOnce(mockShiftId); // SHIFT_ID
+			Storage.getString.mockReturnValueOnce(mockShiftStatus); // SHIFT_STATUS
+			Storage.getString.mockReturnValueOnce(mockWorkLogId); // CURRENT_WORKLOG_ID
 			ShiftWorklogs.finish.mockResolvedValueOnce(mockWorkLogId);
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
@@ -609,6 +678,7 @@ describe('Shift', () => {
 		it('should handle ShiftWorklogs.finish errors', async () => {
 			const error = new Error('ShiftWorklogs finish failed');
 			const mockShiftId = 'shift-123';
+			const mockShiftStatus = 'opened';
 			const mockWorkLogId = 'worklog-456';
 			const mockParams = {
 				referenceId: 'ref-123',
@@ -616,8 +686,9 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
-			Storage.getString.mockReturnValueOnce(mockShiftId);
-			Storage.getString.mockReturnValueOnce(mockWorkLogId);
+			Storage.getString.mockReturnValueOnce(mockShiftId); // SHIFT_ID
+			Storage.getString.mockReturnValueOnce(mockShiftStatus); // SHIFT_STATUS
+			Storage.getString.mockReturnValueOnce(mockWorkLogId); // CURRENT_WORKLOG_ID
 			ShiftWorklogs.finish.mockRejectedValueOnce(error);
 
 			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow('ShiftWorklogs finish failed');
@@ -627,6 +698,7 @@ describe('Shift', () => {
 
 		it('should continue even if TimeTracker fails', async () => {
 			const mockShiftId = 'shift-123';
+			const mockShiftStatus = 'opened';
 			const mockWorkLogId = 'worklog-456';
 			const mockParams = {
 				referenceId: 'ref-123',
@@ -634,8 +706,9 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
-			Storage.getString.mockReturnValueOnce(mockShiftId);
-			Storage.getString.mockReturnValueOnce(mockWorkLogId);
+			Storage.getString.mockReturnValueOnce(mockShiftId); // SHIFT_ID
+			Storage.getString.mockReturnValueOnce(mockShiftStatus); // SHIFT_STATUS
+			Storage.getString.mockReturnValueOnce(mockWorkLogId); // CURRENT_WORKLOG_ID
 			ShiftWorklogs.finish.mockResolvedValueOnce(mockWorkLogId);
 			TimeTracker.addEvent.mockRejectedValueOnce(new Error('TimeTracker failed'));
 
@@ -649,8 +722,9 @@ describe('Shift', () => {
 			expect(result).toBe(mockWorkLogId);
 		});
 
-		it('should handle missing worklog ID', async () => {
+		it('should resume shift when finishing worklog and shift is paused', async () => {
 			const mockShiftId = 'shift-123';
+			const mockWorkLogId = 'worklog-456';
 			const mockParams = {
 				referenceId: 'ref-123',
 				name: 'Test Work',
@@ -658,7 +732,48 @@ describe('Shift', () => {
 			};
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
-			Storage.getString.mockReturnValueOnce(undefined);
+			Storage.getString.mockReturnValueOnce('paused'); // shift status
+			Storage.getString.mockReturnValueOnce(mockWorkLogId);
+			ShiftWorklogs.finish.mockResolvedValueOnce(mockWorkLogId);
+			TimeTracker.addEvent.mockResolvedValueOnce();
+
+			const result = await Shift.finishWorkLog(mockParams);
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(ShiftWorklogs.finish).toHaveBeenCalledWith({
+				referenceId: mockParams.referenceId,
+				endDate: mockDate.toISOString(),
+			});
+			expect(TimeTracker.addEvent).toHaveBeenCalledWith({
+				id: mockWorkLogId,
+				time: mockDate.toISOString(),
+				type: 'finish',
+				payload: {
+					type: mockParams.type,
+					name: mockParams.name,
+					shiftId: mockShiftId,
+					referenceId: mockParams.referenceId,
+				},
+			});
+			// Debe reanudar el turno cuando estaba pausado
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened');
+			expect(Storage.delete).toHaveBeenCalledWith(CURRENT_WORKLOG_ID);
+			expect(Storage.delete).toHaveBeenCalledWith(CURRENT_WORKLOG_DATA);
+			expect(result).toBe(mockWorkLogId);
+		});
+
+		it('should handle missing worklog ID', async () => {
+			const mockShiftId = 'shift-123';
+			const mockShiftStatus = 'opened';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
+
+			Storage.getString.mockReturnValueOnce(mockShiftId); // SHIFT_ID
+			Storage.getString.mockReturnValueOnce(mockShiftStatus); // SHIFT_STATUS
+			Storage.getString.mockReturnValueOnce(undefined); // CURRENT_WORKLOG_ID
 			ShiftWorklogs.finish.mockResolvedValueOnce('new-worklog-id');
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
@@ -719,7 +834,7 @@ describe('Shift', () => {
 			const mockWorkTime = mockElapsedTime - mockPauseTime;
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
-			ShiftWorklogs.getTrackedShiftWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
+			ShiftWorklogs.getShiftTrackedWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
 			TrackerRecords.getStartDateById.mockResolvedValueOnce(mockStartDate);
 			TrackerRecords.getEndDateById.mockResolvedValueOnce(mockEndDate);
 			Formatter.formatShiftActivities.mockReturnValueOnce(mockFormattedActivities);
@@ -729,7 +844,7 @@ describe('Shift', () => {
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get shift report');
 			expect(Storage.getString).toHaveBeenCalledWith(SHIFT_ID);
-			expect(ShiftWorklogs.getTrackedShiftWorkLogs).toHaveBeenCalledWith(mockShiftId);
+			expect(ShiftWorklogs.getShiftTrackedWorkLogs).toHaveBeenCalledWith(mockShiftId);
 			expect(TrackerRecords.getStartDateById).toHaveBeenCalledWith(mockShiftId);
 			expect(TrackerRecords.getEndDateById).toHaveBeenCalledWith(mockShiftId);
 			expect(Formatter.formatShiftActivities).toHaveBeenCalledWith(mockWorkLogsEvents);
@@ -755,7 +870,7 @@ describe('Shift', () => {
 			const mockElapsedTime = 14400; // 4 horas en segundos
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
-			ShiftWorklogs.getTrackedShiftWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
+			ShiftWorklogs.getShiftTrackedWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
 			TrackerRecords.getStartDateById.mockResolvedValueOnce(mockStartDate);
 			TrackerRecords.getEndDateById.mockResolvedValueOnce(null);
 			Formatter.formatShiftActivities.mockReturnValueOnce(mockFormattedActivities);
@@ -819,7 +934,7 @@ describe('Shift', () => {
 			const expectedWorkTime = mockElapsedTime - expectedPauseTime;
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
-			ShiftWorklogs.getTrackedShiftWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
+			ShiftWorklogs.getShiftTrackedWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
 			TrackerRecords.getStartDateById.mockResolvedValueOnce(mockStartDate);
 			TrackerRecords.getEndDateById.mockResolvedValueOnce(mockEndDate);
 			Formatter.formatShiftActivities.mockReturnValueOnce(activitiesWithPauses);
@@ -874,7 +989,7 @@ describe('Shift', () => {
 			];
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
-			ShiftWorklogs.getTrackedShiftWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
+			ShiftWorklogs.getShiftTrackedWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
 			TrackerRecords.getStartDateById.mockResolvedValueOnce(mockStartDate);
 			TrackerRecords.getEndDateById.mockResolvedValueOnce(mockEndDate);
 			Formatter.formatShiftActivities.mockReturnValueOnce(activitiesWithoutPauses);

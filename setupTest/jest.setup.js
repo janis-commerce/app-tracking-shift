@@ -82,7 +82,7 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 	default: {
 		open: jest.fn(),
 		finish: jest.fn(),
-		getTrackedShiftWorkLogs: jest.fn(),
+		getShiftTrackedWorkLogs: jest.fn(),
 	},
 }));
 
@@ -92,6 +92,7 @@ jest.mock('../lib/Formatter', () => ({
 	default: {
 		formatShiftActivities: jest.fn(),
 		formatWorkLogTypes: jest.fn(),
+		formatWorkLogId: jest.fn(),
 	},
 }));
 
