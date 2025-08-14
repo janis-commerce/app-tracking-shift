@@ -30,9 +30,11 @@ export const mockMMKV = {
 	getNumber: jest.fn(),
 	getBoolean: jest.fn(),
 	getObject: jest.fn(),
+	getBuffer: jest.fn(),
 	delete: jest.fn(),
 	clearAll: jest.fn(),
-	contains: jest.fn(),
+	contains: jest.fn(() => false),
 	getAllKeys: jest.fn(() => []),
 	recursiveDelete: jest.fn(),
+	addOnValueChangedListener: jest.fn(() => () => {}),
 };

@@ -76,6 +76,16 @@ jest.mock('../lib/StaffApiServices', () => ({
 	postWorklog: jest.fn(),
 }));
 
+// Mock ShiftWorklogs
+jest.mock('../lib/ShiftWorklogs', () => ({
+	__esModule: true,
+	default: {
+		open: jest.fn(),
+		finish: jest.fn(),
+		prepareWorkLogTypes: jest.fn(),
+	},
+}));
+
 // Mock TimeTracker
 jest.mock('../lib/db/TimeTrackerService', () => ({
 	addEvent: jest.fn(),
@@ -92,4 +102,40 @@ jest.mock('../lib/db/StorageService', () => ({
 jest.mock('react-native-mmkv', () => ({
 	__esModule: true,
 	MMKV: jest.fn().mockImplementation(() => mockMMKV),
+	useMMKVString: jest.fn((key) => {
+		// Retorna un array con el valor y el setter, simulando el comportamiento real del hook
+		const mockValue = mockMMKV.getString(key) || null;
+		const mockSetter = jest.fn();
+		return [mockValue, mockSetter];
+	}),
 }));
+
+// Mock useMMKVObject hook
+jest.mock('../lib/hooks/useMMKVObject', () => ({
+	__esModule: true,
+	useMMKVObject: jest.fn((key, defaultValue = null) => {
+		// Simula el comportamiento del hook personalizado
+		const rawValue = mockMMKV.getString(key);
+		let parsedValue = defaultValue;
+
+		if (rawValue) {
+			try {
+				parsedValue = JSON.parse(rawValue);
+			} catch (e) {
+				parsedValue = defaultValue;
+			}
+		}
+
+		return [parsedValue];
+	}),
+}));
+
+jest.mock('../lib/utils/helpers', () => {
+	const actualHelpers = jest.requireActual('../lib/utils/helpers');
+	return {
+		__esModule: true,
+		...actualHelpers,
+		generateRandomId: jest.fn(() => 'mock-random-id'),
+		promiseWrapper: jest.fn(),
+	};
+});
