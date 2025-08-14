@@ -8,4 +8,5 @@
 - An instance of time tracker service
 - Shift react context with its provider
 - StaffApiServices to handle api request for shift management.
-- function to get worklog abm
+- Function to get worklog abm
+- Methods to init and finish worklogs
