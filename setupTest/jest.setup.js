@@ -74,7 +74,7 @@ jest.mock('../lib/StaffApiServices', () => ({
 	getShiftsList: jest.fn(),
 	getWorkLogTypes: jest.fn(),
 	postWorklog: jest.fn(),
-	getStaffMSAuthorization: jest.fn(),
+	getSetting: jest.fn(),
 }));
 
 // Mock ShiftWorklogs
