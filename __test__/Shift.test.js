@@ -663,4 +663,76 @@ describe('Shift', () => {
 			expect(Storage.delete).not.toHaveBeenCalled();
 		});
 	});
+
+	describe('checkStaffMSAuthorization', () => {
+		it('should return true when enabledShiftAndWorkLog is true', async () => {
+			StaffService.getSetting.mockResolvedValueOnce({
+				result: {
+					enabledShiftAndWorkLog: true,
+				},
+			});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
+			expect(result).toBe(true);
+		});
+
+		it('should return false when enabledShiftAndWorkLog is false', async () => {
+			StaffService.getSetting.mockResolvedValueOnce({
+				result: {
+					enabledShiftAndWorkLog: false,
+				},
+			});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
+			expect(result).toBe(false);
+		});
+
+		it('should return false when enabledShiftAndWorkLog is undefined', async () => {
+			StaffService.getSetting.mockResolvedValueOnce({
+				result: {
+					otherSetting: true,
+				},
+			});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
+			expect(result).toBe(false);
+		});
+
+		it('should return false when result is undefined', async () => {
+			StaffService.getSetting.mockResolvedValueOnce({
+				result: undefined,
+			});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
+			expect(result).toBe(false);
+		});
+
+		it('should return false when response has no result property', async () => {
+			StaffService.getSetting.mockResolvedValueOnce({});
+
+			const result = await Shift.checkStaffMSAuthorization();
+
+			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
+			expect(result).toBe(false);
+		});
+
+		it('should handle staff service errors', async () => {
+			const error = new Error('Setting check failed');
+			StaffService.getSetting.mockRejectedValueOnce(error);
+
+			await expect(Shift.checkStaffMSAuthorization()).rejects.toThrow('Setting check failed');
+			expect(mockCrashlytics.recordError).toHaveBeenCalledWith(
+				error,
+				'Error checking staff MS authorization'
+			);
+		});
+	});
 });
