@@ -1,7 +1,7 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
-import {openShift, downloadWorkLogTypes} from '../lib/utils/provider';
+import {openShift, downloadWorkLogTypes, isAuthorizedToUseStaffMS} from '../lib/utils/provider';
 import {mockMMKV} from '../__mocks__';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 import {promiseWrapper} from '../lib/utils/helpers';
@@ -10,6 +10,7 @@ import {promiseWrapper} from '../lib/utils/helpers';
 jest.mock('../lib/utils/provider', () => ({
 	openShift: jest.fn(),
 	downloadWorkLogTypes: jest.fn(),
+	isAuthorizedToUseStaffMS: jest.fn(),
 }));
 
 describe('ShiftTrackingProvider', () => {
@@ -43,7 +44,98 @@ describe('ShiftTrackingProvider', () => {
 		});
 	});
 
+	describe('Staff Authorization Validation', () => {
+		it('should not proceed with openShift and downloadWorkLogTypes when user is not authorized', async () => {
+			isAuthorizedToUseStaffMS.mockResolvedValueOnce(false);
+
+			let contextValue;
+
+			const TestComponent = () => {
+				contextValue = React.useContext(ShiftTrackingContext);
+				return <div data-testid="unauthorized-test">Not Authorized</div>;
+			};
+
+			const {getByTestId} = render(
+				<ShiftTrackingProvider>
+					<TestComponent />
+				</ShiftTrackingProvider>
+			);
+
+			await waitFor(() => {
+				expect(getByTestId('unauthorized-test')).toBeDefined();
+				expect(isAuthorizedToUseStaffMS).toHaveBeenCalledTimes(1);
+				expect(openShift).not.toHaveBeenCalled();
+				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
+				expect(contextValue.error).toBeNull();
+			});
+		});
+
+		it('should set staffMSAuthorization error when authorization check fails', async () => {
+			const authError = new Error('Authorization failed');
+			isAuthorizedToUseStaffMS.mockRejectedValueOnce(authError);
+
+			let contextValue;
+
+			const TestComponent = () => {
+				contextValue = React.useContext(ShiftTrackingContext);
+				return (
+					<div data-testid="auth-error-test">
+						{contextValue?.error && (
+							<span data-testid="auth-error">{contextValue.error.message}</span>
+						)}
+						{contextValue?.error && (
+							<span data-testid="auth-error-type">{contextValue.error.type}</span>
+						)}
+					</div>
+				);
+			};
+
+			const {getByTestId} = render(
+				<ShiftTrackingProvider>
+					<TestComponent />
+				</ShiftTrackingProvider>
+			);
+
+			await waitFor(() => {
+				expect(getByTestId('auth-error')).toBeDefined();
+				expect(getByTestId('auth-error-type')).toBeDefined();
+				expect(isAuthorizedToUseStaffMS).toHaveBeenCalledTimes(1);
+				expect(openShift).not.toHaveBeenCalled();
+				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
+				expect(contextValue.error).toEqual({
+					message: authError.message,
+					type: 'staffMSAuthorization',
+				});
+			});
+		});
+		it('should handle authorization error and not proceed with subsequent operations', async () => {
+			const authError = new Error('User not found in staff system');
+			isAuthorizedToUseStaffMS.mockRejectedValueOnce(authError);
+
+			let contextValue;
+
+			const TestComponent = () => {
+				contextValue = React.useContext(ShiftTrackingContext);
+				return <div data-testid="no-proceed-test">Test</div>;
+			};
+
+			render(
+				<ShiftTrackingProvider>
+					<TestComponent />
+				</ShiftTrackingProvider>
+			);
+
+			await waitFor(() => {
+				expect(isAuthorizedToUseStaffMS).toHaveBeenCalledTimes(1);
+				expect(openShift).not.toHaveBeenCalled();
+				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
+				expect(contextValue.error.type).toBe('staffMSAuthorization');
+			});
+		});
+	});
+
 	it('should call openShift and downloadWorkLogTypes on mount', async () => {
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		openShift.mockResolvedValueOnce(true);
 		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
@@ -62,6 +154,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should call openShift with error callback when provided', async () => {
 		const onError = jest.fn();
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		openShift.mockResolvedValueOnce(true);
 		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
@@ -81,6 +174,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle openShift error and set error state', async () => {
 		const openShiftError = new Error('Failed to open shift');
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		openShift.mockRejectedValueOnce(openShiftError);
 
 		let contextValue;
@@ -111,6 +205,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle downloadWorkLogTypes error and set error state', async () => {
 		const downloadError = new Error('Failed to download worklog types');
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		openShift.mockResolvedValueOnce(true);
 		downloadWorkLogTypes.mockRejectedValueOnce(downloadError);
 
@@ -141,6 +236,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should provide context values from storage', async () => {
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		let contextValue;
 
 		const TestComponent = () => {
@@ -170,6 +266,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should render pausedShiftComponent when shiftStatus is paused and callback is provided', async () => {
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		mockMMKV.getString.mockImplementation((key) => {
 			if (key === 'shift.status') return 'paused';
 			return null;
@@ -188,6 +285,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should render children normally when shiftStatus is not paused', async () => {
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		const {getByText} = render(
 			<ShiftTrackingProvider>
 				<div>Normal Child</div>
@@ -200,6 +298,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should handle empty storage values gracefully', async () => {
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		// Configurar storage vacío para todas las llamadas
 		mockMMKV.getString.mockReturnValue(null);
 
@@ -227,6 +326,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should execute handleShiftTrackingInit successfully without errors', async () => {
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		openShift.mockResolvedValueOnce(true);
 		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
@@ -252,6 +352,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should handle openShift error and continue with downloadWorkLogTypes', async () => {
+		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		const openShiftError = new Error('Open shift failed');
 		openShift.mockRejectedValueOnce(openShiftError);
 		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
