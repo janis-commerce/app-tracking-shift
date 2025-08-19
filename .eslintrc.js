@@ -67,7 +67,10 @@ module.exports = {
 	},
 	settings: {
 		'import/resolver': {
-			node: {},
+			'babel-module': {},
+			node: {
+				paths: ['lib'],
+			},
 		},
 	},
 };
