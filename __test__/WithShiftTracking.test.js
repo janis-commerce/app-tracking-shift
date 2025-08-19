@@ -63,7 +63,7 @@ describe('WithShiftTracking HOC', () => {
 		expect(queryByTestId('paused-component')).toBeNull();
 	});
 
-	it('should render the paused component when shift is paused and pausedShiftComponent is provided', () => {
+	it('should render both paused component and main component when shift is paused and pausedShiftComponent is provided', () => {
 		const WrappedComponent = WithShiftTracking(TestComponent, {
 			pausedShiftComponent: <PausedComponent />,
 		});
@@ -72,14 +72,47 @@ describe('WithShiftTracking HOC', () => {
 			shiftId: 'shift-123',
 		};
 
-		const {getByTestId, queryByTestId} = renderWithContext(
+		const {getByTestId} = renderWithContext(
 			<WrappedComponent testProp="test-value" />,
 			mockShiftData
 		);
 
 		// Verificar que el componente de pausa se renderiza
 		expect(getByTestId('paused-component')).toBeDefined();
-		// Verificar que el componente principal NO se renderiza
-		expect(queryByTestId('test-component')).toBeNull();
+		// Verificar que el componente principal también se renderiza
+		expect(getByTestId('test-component')).toBeDefined();
+	});
+
+	it('should pass props correctly to the wrapped component', () => {
+		const WrappedComponent = WithShiftTracking(TestComponent);
+		const mockShiftData = {
+			shiftStatus: 'opened',
+			shiftId: 'shift-123',
+		};
+
+		const {getByTestId} = renderWithContext(
+			<WrappedComponent testProp="test-value" />,
+			mockShiftData
+		);
+
+		// Verificar que las props se pasan correctamente
+		expect(getByTestId('test-prop')).toBeDefined();
+	});
+
+	it('should pass shiftData correctly to the wrapped component', () => {
+		const WrappedComponent = WithShiftTracking(TestComponent);
+		const mockShiftData = {
+			shiftStatus: 'opened',
+			shiftId: 'shift-123',
+		};
+
+		const {getByTestId} = renderWithContext(
+			<WrappedComponent testProp="test-value" />,
+			mockShiftData
+		);
+
+		// Verificar que shiftData se pasa correctamente
+		expect(getByTestId('shift-status')).toBeDefined();
+		expect(getByTestId('shift-id')).toBeDefined();
 	});
 });
