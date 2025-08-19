@@ -39,8 +39,8 @@ export const mockMMKV = {
 	addOnValueChangedListener: jest.fn(() => () => {}),
 };
 
-// Mock para WorkLogs
-export const mockWorkLogs = [
+// Mock para WorkLogs (raw data)
+export const mockWorkLogsRaw = [
 	{
 		id: '631fb04c8fe08f51a8ee5949',
 		shiftId: 'shift-123',
@@ -86,5 +86,36 @@ export const mockWorkLogs = [
 		dateModified: '2024-01-15T16:00:00.000Z',
 		userCreated: '6a1fc1eeb5b68406e0487a10',
 		userModified: '7e1fc1eeb5b68406e048796',
+	},
+];
+
+// Mock para WorkLogs (formatted data)
+export const mockWorkLogs = [
+	{
+		id: '631fb04c8fe08f51a8ee5949',
+		shiftId: 'shift-123',
+		referenceId: 'picking-store-001',
+		startDate: '2024-01-15T09:00:00.000Z',
+		endDate: '2024-01-15T17:00:00.000Z',
+		status: 'finished',
+		name: 'Picking from store',
+	},
+	{
+		id: '631fb04c8fe08f51a8ee5950',
+		shiftId: 'shift-123',
+		referenceId: 'packaging-001',
+		startDate: '2024-01-15T14:00:00.000Z',
+		endDate: '2024-01-15T15:30:00.000Z',
+		status: 'finished',
+		name: 'Packaging',
+	},
+	{
+		id: '631fb04c8fe08f51a8ee5951',
+		shiftId: 'shift-123',
+		referenceId: 'delivery-001',
+		startDate: '2024-01-15T16:00:00.000Z',
+		endDate: undefined,
+		status: 'inProgress',
+		name: 'Delivery',
 	},
 ];

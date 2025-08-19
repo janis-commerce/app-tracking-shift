@@ -1,6 +1,6 @@
 import Shift from '../lib/Shift';
 import {worklogTypes, parsedWorklogTypes} from '../__mocks__/worklogTypes';
-import {mockCrashlytics, mockWorkLogs} from '../__mocks__';
+import {mockCrashlytics, mockWorkLogs, mockWorkLogsRaw} from '../__mocks__';
 import StaffService from '../lib/StaffApiServices';
 import TimeTracker from '../lib/db/TimeTrackerService';
 import {
@@ -739,7 +739,7 @@ describe('Shift', () => {
 	describe('getWorkLogs', () => {
 		it('should get work logs successfully when shiftId is provided as argument', async () => {
 			const mockShiftId = 'shift-123';
-			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogs);
+			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogsRaw);
 
 			const result = await Shift.getWorkLogs(mockShiftId);
 
@@ -751,7 +751,7 @@ describe('Shift', () => {
 		it('should get work logs successfully when shiftId is obtained from storage', async () => {
 			const mockShiftId = 'shift-456';
 			Storage.getString.mockReturnValueOnce(mockShiftId);
-			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogs);
+			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogsRaw);
 
 			const result = await Shift.getWorkLogs();
 
