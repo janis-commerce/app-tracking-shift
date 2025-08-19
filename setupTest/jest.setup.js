@@ -84,6 +84,7 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		open: jest.fn(),
 		finish: jest.fn(),
 		prepareWorkLogTypes: jest.fn(),
+		getList: jest.fn(),
 	},
 }));
 
@@ -140,3 +141,12 @@ jest.mock('../lib/utils/helpers', () => {
 		promiseWrapper: jest.fn(),
 	};
 });
+
+// Mock utils/provider functions
+jest.mock('../lib/utils/provider', () => ({
+	openShift: jest.fn(),
+	downloadWorkLogTypes: jest.fn(),
+	isAuthorizedToUseStaffMS: jest.fn(),
+	getShiftWorkLogsFromJanis: jest.fn(),
+	saveWorkLogTimesInDB: jest.fn(),
+}));

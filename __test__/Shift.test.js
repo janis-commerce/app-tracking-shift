@@ -1,6 +1,6 @@
 import Shift from '../lib/Shift';
 import {worklogTypes, parsedWorklogTypes} from '../__mocks__/worklogTypes';
-import {mockCrashlytics} from '../__mocks__';
+import {mockCrashlytics, mockWorkLogs} from '../__mocks__';
 import StaffService from '../lib/StaffApiServices';
 import TimeTracker from '../lib/db/TimeTrackerService';
 import {
@@ -733,6 +733,41 @@ describe('Shift', () => {
 				error,
 				'Error checking staff MS authorization'
 			);
+		});
+	});
+
+	describe('getWorkLogs', () => {
+		it('should get work logs successfully when shiftId is provided as argument', async () => {
+			const mockShiftId = 'shift-123';
+			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogs);
+
+			const result = await Shift.getWorkLogs(mockShiftId);
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(ShiftWorklogs.getList).toHaveBeenCalledWith(mockShiftId);
+			expect(result).toEqual(mockWorkLogs);
+		});
+
+		it('should get work logs successfully when shiftId is obtained from storage', async () => {
+			const mockShiftId = 'shift-456';
+			Storage.getString.mockReturnValueOnce(mockShiftId);
+			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogs);
+
+			const result = await Shift.getWorkLogs();
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(Storage.getString).toHaveBeenCalledWith(SHIFT_ID);
+			expect(ShiftWorklogs.getList).toHaveBeenCalledWith(mockShiftId);
+			expect(result).toEqual(mockWorkLogs);
+		});
+
+		it('should throw error when shiftId is not found', async () => {
+			Storage.getString.mockReturnValueOnce(undefined);
+
+			await expect(Shift.getWorkLogs()).rejects.toThrow('Shift ID not found');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+			expect(ShiftWorklogs.getList).not.toHaveBeenCalled();
 		});
 	});
 });
