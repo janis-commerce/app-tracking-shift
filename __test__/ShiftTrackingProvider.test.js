@@ -618,7 +618,7 @@ describe('ShiftTrackingProvider', () => {
 			const mockWorkLogs = {
 				openWorkLogs: [
 					{
-						id: 'worklog-1',
+						id: 'picking-worklog-1', // el id que se obtiene de janis es "worklog-1", pero se formatea al recibirlo para la base de datos
 						referenceId: 'default-picking-work', // Esta es una excluded worklog type
 						name: 'Picking Work',
 						startDate: '2023-01-01T10:00:00Z',
@@ -644,7 +644,7 @@ describe('ShiftTrackingProvider', () => {
 
 			await waitFor(() => {
 				// Debe guardar el worklog data pero NO cambiar el status a paused
-				expect(mockMMKV.set).toHaveBeenCalledWith('worklog.id', 'worklog-1');
+				expect(mockMMKV.set).toHaveBeenCalledWith('worklog.id', 'picking-worklog-1');
 				expect(mockMMKV.set).toHaveBeenCalledWith(
 					'worklog.data',
 					JSON.stringify(mockWorkLogs.openWorkLogs[0])

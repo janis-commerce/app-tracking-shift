@@ -45,7 +45,7 @@ export const mockWorkLogsRaw = [
 		id: '631fb04c8fe08f51a8ee5949',
 		shiftId: 'shift-123',
 		workLogTypeId: '631fb04c8fe08f51a8ee5949',
-		workLogTypeRefId: 'picking-store-001',
+		workLogTypeRefId: 'default-picking-work',
 		workLogTypeName: 'Picking from store',
 		userId: '6a1fc1eeb5b68406e0487a10',
 		startDate: '2024-01-15T09:00:00.000Z',
@@ -92,9 +92,9 @@ export const mockWorkLogsRaw = [
 // Mock para WorkLogs (formatted data)
 export const mockWorkLogs = [
 	{
-		id: '631fb04c8fe08f51a8ee5949',
+		id: 'picking-631fb04c8fe08f51a8ee5949',
 		shiftId: 'shift-123',
-		referenceId: 'picking-store-001',
+		referenceId: 'default-picking-work',
 		startDate: '2024-01-15T09:00:00.000Z',
 		endDate: '2024-01-15T17:00:00.000Z',
 		status: 'finished',
