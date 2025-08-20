@@ -10,7 +10,7 @@ import {
 } from '../lib/utils/provider';
 import {mockMMKV, mockCrashlytics} from '../__mocks__';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
-import {promiseWrapper} from '../lib/utils/helpers';
+import * as Helpers from '../lib/utils/helpers';
 
 describe('ShiftTrackingProvider', () => {
 	beforeEach(() => {
@@ -36,7 +36,7 @@ describe('ShiftTrackingProvider', () => {
 		});
 
 		// Configurar promiseWrapper para retornar éxito por defecto
-		promiseWrapper.mockImplementation((promise) => {
+		jest.spyOn(Helpers, 'promiseWrapper').mockImplementation((promise) => {
 			if (!promise || typeof promise.then !== 'function') {
 				return Promise.resolve([undefined, null]);
 			}
