@@ -10,6 +10,8 @@ export const mockRequest = {
 export const mockTimeTracker = {
 	addEvent: jest.fn(),
 	deleteAllEvents: jest.fn(),
+	getElapsedTime: jest.fn(),
+	searchEventByQuery: jest.fn(),
 };
 
 // Mock para Crashlytics
@@ -117,5 +119,92 @@ export const mockWorkLogs = [
 		endDate: undefined,
 		status: 'inProgress',
 		name: 'Delivery',
+	},
+];
+
+export const mockShiftData = {
+	id: 'shift-123',
+	startDate: '2024-01-15T09:00:00.000Z',
+	status: 'opened',
+	dateToClose: '2024-01-15T17:00:00.000Z',
+	dateMaxToClose: '2024-01-15T17:00:00.000Z',
+	userId: '6a1fc1eeb5b68406e0487a10',
+	displayId: '240715-EARPIQ',
+	dateCreated: '2019-07-12T19:00:00.000Z',
+	dateModified: '2019-07-20T19:00:00.000Z',
+	userCreated: '6a1fc1eeb5b68406e0487a10',
+	userModified: '7e1fc1eeb5b68406e048796',
+};
+
+// Mock para TrackerRecords
+export const mockTrackerRecords = {
+	getWorkLogsFromTimeTracker: jest.fn(),
+	getStartDateById: jest.fn(),
+	getEndDateById: jest.fn(),
+};
+
+// Datos de ejemplo para workLogsEvents
+export const mockWorkLogsEvents = [
+	{
+		id: 'event-1',
+		time: '2024-01-15T10:00:00.000Z',
+		type: 'start',
+		payload: {
+			type: 'work',
+			name: 'Trabajo Principal',
+			shiftId: 'shift-123',
+			referenceId: 'ref-1',
+		},
+	},
+	{
+		id: 'event-2',
+		time: '2024-01-15T11:00:00.000Z',
+		type: 'start',
+		payload: {
+			type: 'pause',
+			name: 'Pausa',
+			shiftId: 'shift-123',
+			referenceId: 'ref-2',
+		},
+	},
+	{
+		id: 'event-3',
+		time: '2024-01-15T11:30:00.000Z',
+		type: 'finish',
+		payload: {
+			type: 'pause',
+			name: 'Pausa',
+			shiftId: 'shift-123',
+			referenceId: 'ref-2',
+		},
+	},
+	{
+		id: 'event-4',
+		time: '2024-01-15T12:00:00.000Z',
+		type: 'finish',
+		payload: {
+			type: 'work',
+			name: 'Trabajo Principal',
+			shiftId: 'shift-123',
+			referenceId: 'ref-1',
+		},
+	},
+];
+
+// Datos de ejemplo para actividades formateadas
+export const mockFormattedActivities = [
+	{
+		type: 'work',
+		name: 'Trabajo Principal',
+		startTime: '2024-01-15T10:00:00.000Z',
+		endTime: '2024-01-15T12:00:00.000Z',
+		duration: 7200000, // 2 horas en milisegundos
+	},
+	{
+		type: 'pause',
+		name: 'Pausa',
+		startTime: '2024-01-15T11:00:00.000Z',
+		endTime: '2024-01-15T11:30:00.000Z',
+		duration: 1800000, // 30 minutos en milisegundos
 	},
 ];

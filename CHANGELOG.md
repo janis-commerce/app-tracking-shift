@@ -10,3 +10,5 @@
 - StaffApiServices to handle api request for shift management.
 - Function to get worklog abm
 - Methods to init and finish worklogs
+- Method to get shift report
+- WithTrackingShift hoc
