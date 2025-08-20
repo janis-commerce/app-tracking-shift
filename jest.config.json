@@ -10,28 +10,27 @@
 	"coverageReporters": ["html", "text"],
 	"coverageDirectory": "coverage",
 	"collectCoverageFrom": [
-	  "lib/Shift.js",
-	  "lib/provider/ShiftTrackingProvider.js",
-	  "!**/node_modules/**",
-	  "!**/vendor/**",
-	  "!**/env/**",
-	  "!<rootDir>/coverage",
-	  "!**/jestMocks/**"
+		"lib/Shift.js",
+		"lib/provider/ShiftTrackingProvider.js",
+		"lib/components/WithShiftTracking/index.js",
+		"!**/node_modules/**",
+		"!**/vendor/**",
+		"!**/env/**",
+		"!<rootDir>/coverage",
+		"!**/jestMocks/**"
 	],
 	"coveragePathIgnorePatterns": ["/node_modules/"],
 	"coverageThreshold": {
-	  "global": {
-		"branches": 100,
-		"functions": 100,
-		"lines": 100,
-		"statements": 100
-	  }
+		"global": {
+			"branches": 100,
+			"functions": 100,
+			"lines": 100,
+			"statements": 100
+		}
 	},
 	"transform": {
-	  "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
+		"^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
 	},
-	"transformIgnorePatterns": [
-	  "node_modules/(?!(react-native|@react-native|react-native-.*)/)"
-	],
+	"transformIgnorePatterns": ["node_modules/(?!(react-native|@react-native|react-native-.*)/)"],
 	"testEnvironment": "jsdom"
 }
