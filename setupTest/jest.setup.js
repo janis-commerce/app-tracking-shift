@@ -83,7 +83,17 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 	default: {
 		open: jest.fn(),
 		finish: jest.fn(),
-		prepareWorkLogTypes: jest.fn(),
+		getShiftTrackedWorkLogs: jest.fn(),
+	},
+}));
+
+// Mock Formatter
+jest.mock('../lib/Formatter', () => ({
+	__esModule: true,
+	default: {
+		formatShiftActivities: jest.fn(),
+		formatWorkLogTypes: jest.fn(),
+		formatWorkLogId: jest.fn(),
 	},
 }));
 
@@ -91,6 +101,8 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 jest.mock('../lib/db/TimeTrackerService', () => ({
 	addEvent: jest.fn(),
 	deleteAllEvents: jest.fn(),
+	getElapsedTime: jest.fn(),
+	searchEventByQuery: jest.fn(),
 }));
 
 // Mock StorageService
@@ -140,3 +152,18 @@ jest.mock('../lib/utils/helpers', () => {
 		promiseWrapper: jest.fn(),
 	};
 });
+
+jest.mock('../lib/utils/storage', () => ({
+	__esModule: true,
+	getShiftData: jest.fn(),
+}));
+
+// Mock TrackerRecords
+jest.mock('../lib/TrackerRecords', () => ({
+	__esModule: true,
+	default: {
+		getWorkLogsFromTimeTracker: jest.fn(),
+		getStartDateById: jest.fn(),
+		getEndDateById: jest.fn(),
+	},
+}));
