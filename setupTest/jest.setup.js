@@ -1,4 +1,10 @@
-import {mockRequest, mockTimeTracker, mockCrashlytics, mockMMKV} from '../__mocks__';
+import {
+	mockRequest,
+	mockTimeTracker,
+	mockCrashlytics,
+	mockMMKV,
+	mockOfflineData,
+} from '../__mocks__';
 
 jest.mock('@janiscommerce/app-request', () => ({
 	__esModule: true,
@@ -84,6 +90,7 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		open: jest.fn(),
 		finish: jest.fn(),
 		getShiftTrackedWorkLogs: jest.fn(),
+		postPendingBatch: jest.fn(),
 	},
 }));
 
@@ -94,6 +101,7 @@ jest.mock('../lib/Formatter', () => ({
 		formatShiftActivities: jest.fn(),
 		formatWorkLogTypes: jest.fn(),
 		formatWorkLogId: jest.fn(),
+		formatOfflineWorkLog: jest.fn(),
 	},
 }));
 
@@ -153,11 +161,6 @@ jest.mock('../lib/utils/helpers', () => {
 	};
 });
 
-jest.mock('../lib/utils/storage', () => ({
-	__esModule: true,
-	getShiftData: jest.fn(),
-}));
-
 // Mock TrackerRecords
 jest.mock('../lib/TrackerRecords', () => ({
 	__esModule: true,
@@ -165,5 +168,22 @@ jest.mock('../lib/TrackerRecords', () => ({
 		getWorkLogsFromTimeTracker: jest.fn(),
 		getStartDateById: jest.fn(),
 		getEndDateById: jest.fn(),
+		getClientShiftActivities: jest.fn(),
 	},
+}));
+
+// Mock OfflineData
+jest.mock('../lib/OfflineData', () => ({
+	__esModule: true,
+	default: mockOfflineData,
+}));
+
+// Mock utils/storage
+jest.mock('../lib/utils/storage', () => ({
+	__esModule: true,
+	getShiftData: jest.fn(),
+	getWorkLogTypesData: jest.fn(),
+	getStaffAuthorizationData: jest.fn(),
+	setObject: jest.fn(),
+	getObject: jest.fn(),
 }));

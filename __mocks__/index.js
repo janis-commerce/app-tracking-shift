@@ -127,3 +127,48 @@ export const mockFormattedActivities = [
 		duration: 1800, // 30 minutos en segundos
 	},
 ];
+
+// Mock data para offline worklogs
+export const mockPendingWorkLogs = [
+	{
+		referenceId: 'ref-1',
+		startDate: '2024-01-15T10:00:00.000Z',
+		endDate: '2024-01-15T12:00:00.000Z',
+	},
+	{
+		referenceId: 'ref-2',
+		startDate: '2024-01-15T11:00:00.000Z',
+		endDate: '2024-01-15T11:30:00.000Z',
+	},
+];
+
+// Mock para formatted offline worklogs
+export const mockFormattedOfflineWorkLogs = [
+	{
+		workLogTypeRefId: 'ref-1',
+		startDate: '2024-01-15T10:00:00.000Z',
+		endDate: '2024-01-15T12:00:00.000Z',
+	},
+	{
+		workLogTypeRefId: 'ref-2',
+		startDate: '2024-01-15T11:00:00.000Z',
+		endDate: '2024-01-15T11:30:00.000Z',
+	},
+];
+
+// Mock para OfflineData
+export const mockOfflineData = {
+	hasData: false,
+	get: jest.fn(() => []),
+	save: jest.fn(),
+	delete: jest.fn(),
+	deleteAll: jest.fn(),
+};
+
+// Mock para respuestas de postWorklog con batch de pendientes
+export const mockPostWorklogBatchResponse = {
+	result: {
+		itemsCreated: [{id: 'worklog-batch-1'}, {id: 'worklog-batch-2'}],
+		itemsUpdated: [],
+	},
+};
