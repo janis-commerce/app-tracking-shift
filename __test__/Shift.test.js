@@ -1,14 +1,14 @@
-import Shift from '../lib/Shift';
 import {worklogTypes, parsedWorklogTypes} from '../__mocks__/worklogTypes';
 import {
 	mockCrashlytics,
 	mockShiftData,
 	mockWorkLogsEvents,
 	mockFormattedActivities,
+	mockWorkLogs,
+	mockWorkLogsRaw,
 } from '../__mocks__';
 import StaffService from '../lib/StaffApiServices';
 import TimeTracker from '../lib/db/TimeTrackerService';
-import Formatter from '../lib/Formatter';
 import {
 	SHIFT_STATUS,
 	SHIFT_ID,
@@ -21,6 +21,8 @@ import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
 import TrackerRecords from '../lib/TrackerRecords';
 import {getShiftData} from '../lib/utils/storage';
+import Formatter from '../lib/Formatter';
+import Shift from '../lib/Shift';
 
 // Mock para Date
 const mockDate = new Date('2024-01-15T10:30:00.000Z');
@@ -909,13 +911,15 @@ describe('Shift', () => {
 		});
 	});
 
-	describe('getShiftReport', () => {
+	describe('getReport', () => {
 		it('should get shift report successfully with all data', async () => {
 			const mockShiftId = 'shift-123';
 			const mockStartDate = '2024-01-15T09:00:00.000Z';
 			const mockEndDate = '2024-01-15T17:00:00.000Z';
-			const mockElapsedTime = 28800; // 8 horas en segundos
-			const mockPauseTime = 1800; // 30 minutos en segundos
+			const mockElapsedTime = 28800000; // 8 horas en milisegundos
+
+			// pauseTime ahora incluye todas las actividades: 7200000 (trabajo) + 1800000 (pausa) = 9000000 milisegundos
+			const mockPauseTime = 9000000;
 			const mockWorkTime = mockElapsedTime - mockPauseTime;
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
@@ -925,7 +929,7 @@ describe('Shift', () => {
 			Formatter.formatShiftActivities.mockReturnValueOnce(mockFormattedActivities);
 			TimeTracker.getElapsedTime.mockReturnValueOnce(mockElapsedTime);
 
-			const result = await Shift.getShiftReport();
+			const result = await Shift.getReport();
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get shift report');
 			expect(Storage.getString).toHaveBeenCalledWith(SHIFT_ID);
@@ -952,7 +956,7 @@ describe('Shift', () => {
 		it('should get shift report without end date', async () => {
 			const mockShiftId = 'shift-123';
 			const mockStartDate = '2024-01-15T09:00:00.000Z';
-			const mockElapsedTime = 14400; // 4 horas en segundos
+			const mockElapsedTime = 14400000; // 4 horas en milisegundos
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.getShiftTrackedWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
@@ -961,18 +965,15 @@ describe('Shift', () => {
 			Formatter.formatShiftActivities.mockReturnValueOnce(mockFormattedActivities);
 			TimeTracker.getElapsedTime.mockReturnValueOnce(mockElapsedTime);
 
-			const result = await Shift.getShiftReport();
+			const result = await Shift.getReport();
 
 			expect(TimeTracker.getElapsedTime).toHaveBeenCalledWith({
 				startTime: mockStartDate,
 				format: false,
 			});
 
-			// Calculamos el pauseTime basado en las actividades mockeadas
-			const expectedPauseTime = mockFormattedActivities.reduce((acc, activity) => {
-				if (activity?.type === 'pause') return acc + (activity?.duration || 0);
-				return acc;
-			}, 0);
+			// pauseTime ahora incluye todas las actividades: 7200000 (trabajo) + 1800000 (pausa) = 9000000 milisegundos
+			const expectedPauseTime = 9000000;
 			const expectedWorkTime = mockElapsedTime - expectedPauseTime;
 
 			expect(result).toEqual({
@@ -989,43 +990,50 @@ describe('Shift', () => {
 			const mockShiftId = 'shift-123';
 			const mockStartDate = '2024-01-15T09:00:00.000Z';
 			const mockEndDate = '2024-01-15T17:00:00.000Z';
-			const mockElapsedTime = 28800; // 8 horas en segundos
+			const mockElapsedTime = 28800000; // 8 horas en milisegundos
 
-			const activitiesWithPauses = [
+			const activitiesWithVariousTypes = [
 				{
 					type: 'work',
 					name: 'Trabajo Principal',
 					startTime: '2024-01-15T10:00:00.000Z',
 					endTime: '2024-01-15T12:00:00.000Z',
-					duration: 7200,
+					duration: 7200000, // 2 horas en milisegundos
 				},
 				{
 					type: 'pause',
 					name: 'Pausa 1',
 					startTime: '2024-01-15T12:00:00.000Z',
 					endTime: '2024-01-15T12:30:00.000Z',
-					duration: 1800, // 30 minutos
+					duration: 1800000, // 30 minutos en milisegundos
 				},
 				{
 					type: 'pause',
 					name: 'Pausa 2',
 					startTime: '2024-01-15T14:00:00.000Z',
 					endTime: '2024-01-15T14:15:00.000Z',
-					duration: 900, // 15 minutos
+					duration: 900000, // 15 minutos en milisegundos
+				},
+				{
+					type: 'work',
+					name: 'Trabajo Secundario',
+					startTime: '2024-01-15T12:00:00.000Z',
+					endTime: '2024-01-15T14:00:00.000Z',
 				},
 			];
 
-			const expectedPauseTime = 2700; // 45 minutos total
+			// Ahora pauseTime incluye TODAS las actividades, no solo las de tipo 'pause'
+			const expectedPauseTime = 9900000; // 7200000 + 1800000 + 900000 = 9900000 milisegundos total
 			const expectedWorkTime = mockElapsedTime - expectedPauseTime;
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.getShiftTrackedWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
 			TrackerRecords.getStartDateById.mockResolvedValueOnce(mockStartDate);
 			TrackerRecords.getEndDateById.mockResolvedValueOnce(mockEndDate);
-			Formatter.formatShiftActivities.mockReturnValueOnce(activitiesWithPauses);
+			Formatter.formatShiftActivities.mockReturnValueOnce(activitiesWithVariousTypes);
 			TimeTracker.getElapsedTime.mockReturnValueOnce(mockElapsedTime);
 
-			const result = await Shift.getShiftReport();
+			const result = await Shift.getReport();
 
 			expect(result.pauseTime).toBe(expectedPauseTime);
 			expect(result.workTime).toBe(expectedWorkTime);
@@ -1035,7 +1043,7 @@ describe('Shift', () => {
 		it('should handle missing shift ID', async () => {
 			Storage.getString.mockReturnValueOnce(null);
 
-			await expect(Shift.getShiftReport()).rejects.toThrow('Shift ID is required');
+			await expect(Shift.getReport()).rejects.toThrow('Shift ID is required');
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get shift report');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
@@ -1044,47 +1052,90 @@ describe('Shift', () => {
 		it('should handle empty shift ID', async () => {
 			Storage.getString.mockReturnValueOnce('');
 
-			await expect(Shift.getShiftReport()).rejects.toThrow('Shift ID is required');
+			await expect(Shift.getReport()).rejects.toThrow('Shift ID is required');
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get shift report');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 
-		it('should handle activities without pause time', async () => {
+		it('should handle activities with only work type', async () => {
 			const mockShiftId = 'shift-123';
 			const mockStartDate = '2024-01-15T09:00:00.000Z';
 			const mockEndDate = '2024-01-15T17:00:00.000Z';
-			const mockElapsedTime = 28800; // 8 horas en segundos
+			const mockElapsedTime = 28800000; // 8 horas en milisegundos
 
-			const activitiesWithoutPauses = [
+			const activitiesWithOnlyWork = [
 				{
 					type: 'work',
 					name: 'Trabajo Principal',
 					startTime: '2024-01-15T10:00:00.000Z',
 					endTime: '2024-01-15T12:00:00.000Z',
-					duration: 7200,
+					duration: 7200000, // 2 horas en milisegundos
 				},
 				{
 					type: 'work',
 					name: 'Trabajo Secundario',
 					startTime: '2024-01-15T12:00:00.000Z',
 					endTime: '2024-01-15T14:00:00.000Z',
-					duration: 7200,
+					duration: 7200000, // 2 horas en milisegundos
 				},
 			];
+
+			// pauseTime ahora incluye todas las actividades: 7200000 + 7200000 = 14400000 milisegundos
+			const expectedPauseTime = 14400000;
+			const expectedWorkTime = mockElapsedTime - expectedPauseTime;
 
 			Storage.getString.mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.getShiftTrackedWorkLogs.mockResolvedValueOnce(mockWorkLogsEvents);
 			TrackerRecords.getStartDateById.mockResolvedValueOnce(mockStartDate);
 			TrackerRecords.getEndDateById.mockResolvedValueOnce(mockEndDate);
-			Formatter.formatShiftActivities.mockReturnValueOnce(activitiesWithoutPauses);
+			Formatter.formatShiftActivities.mockReturnValueOnce(activitiesWithOnlyWork);
 			TimeTracker.getElapsedTime.mockReturnValueOnce(mockElapsedTime);
 
-			const result = await Shift.getShiftReport();
+			const result = await Shift.getReport();
 
-			expect(result.pauseTime).toBe(0);
-			expect(result.workTime).toBe(mockElapsedTime);
+			expect(result.pauseTime).toBe(expectedPauseTime);
+			expect(result.workTime).toBe(expectedWorkTime);
 			expect(result.elapsedTime).toBe(mockElapsedTime);
+		});
+	});
+
+	describe('getWorkLogs', () => {
+		it('should get work logs successfully when shiftId is provided as argument', async () => {
+			const mockShiftId = 'shift-123';
+			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogsRaw);
+			Formatter.formatWorkLogsFromJanis.mockReturnValueOnce(mockWorkLogs);
+
+			const result = await Shift.getWorkLogs(mockShiftId);
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(ShiftWorklogs.getList).toHaveBeenCalledWith(mockShiftId);
+			expect(Formatter.formatWorkLogsFromJanis).toHaveBeenCalledWith(mockWorkLogsRaw);
+			expect(result).toEqual(mockWorkLogs);
+		});
+
+		it('should get work logs successfully when shiftId is obtained from storage', async () => {
+			const mockShiftId = 'shift-456';
+			Storage.getString.mockReturnValueOnce(mockShiftId);
+			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogsRaw);
+			Formatter.formatWorkLogsFromJanis.mockReturnValueOnce(mockWorkLogs);
+
+			const result = await Shift.getWorkLogs();
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(Storage.getString).toHaveBeenCalledWith(SHIFT_ID);
+			expect(ShiftWorklogs.getList).toHaveBeenCalledWith(mockShiftId);
+			expect(Formatter.formatWorkLogsFromJanis).toHaveBeenCalledWith(mockWorkLogsRaw);
+			expect(result).toEqual(mockWorkLogs);
+		});
+
+		it('should throw error when shiftId is not found', async () => {
+			Storage.getString.mockReturnValueOnce(undefined);
+
+			await expect(Shift.getWorkLogs()).rejects.toThrow('Shift ID not found');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+			expect(ShiftWorklogs.getList).not.toHaveBeenCalled();
 		});
 	});
 });

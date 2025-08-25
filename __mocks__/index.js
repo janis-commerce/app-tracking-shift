@@ -41,6 +41,87 @@ export const mockMMKV = {
 	addOnValueChangedListener: jest.fn(() => () => {}),
 };
 
+// Mock para WorkLogs (raw data)
+export const mockWorkLogsRaw = [
+	{
+		id: '631fb04c8fe08f51a8ee5949',
+		shiftId: 'shift-123',
+		workLogTypeId: '631fb04c8fe08f51a8ee5949',
+		workLogTypeRefId: 'default-picking-work',
+		workLogTypeName: 'Picking from store',
+		userId: '6a1fc1eeb5b68406e0487a10',
+		startDate: '2024-01-15T09:00:00.000Z',
+		endDate: '2024-01-15T17:00:00.000Z',
+		time: 480,
+		status: 'finished',
+		dateCreated: '2024-01-15T09:00:00.000Z',
+		dateModified: '2024-01-15T17:00:00.000Z',
+		userCreated: '6a1fc1eeb5b68406e0487a10',
+		userModified: '7e1fc1eeb5b68406e048796',
+	},
+	{
+		id: '631fb04c8fe08f51a8ee5950',
+		shiftId: 'shift-123',
+		workLogTypeId: '631fb04c8fe08f51a8ee5950',
+		workLogTypeRefId: 'packaging-001',
+		workLogTypeName: 'Packaging',
+		userId: '6a1fc1eeb5b68406e0487a10',
+		startDate: '2024-01-15T14:00:00.000Z',
+		endDate: '2024-01-15T15:30:00.000Z',
+		time: 90,
+		status: 'finished',
+		dateCreated: '2024-01-15T14:00:00.000Z',
+		dateModified: '2024-01-15T15:30:00.000Z',
+		userCreated: '6a1fc1eeb5b68406e0487a10',
+		userModified: '7e1fc1eeb5b68406e048796',
+	},
+	{
+		id: '631fb04c8fe08f51a8ee5951',
+		shiftId: 'shift-123',
+		workLogTypeId: '631fb04c8fe08f51a8ee5951',
+		workLogTypeRefId: 'delivery-001',
+		workLogTypeName: 'Delivery',
+		userId: '6a1fc1eeb5b68406e0487a10',
+		startDate: '2024-01-15T16:00:00.000Z',
+		status: 'inProgress',
+		dateCreated: '2024-01-15T16:00:00.000Z',
+		dateModified: '2024-01-15T16:00:00.000Z',
+		userCreated: '6a1fc1eeb5b68406e0487a10',
+		userModified: '7e1fc1eeb5b68406e048796',
+	},
+];
+
+// Mock para WorkLogs (formatted data)
+export const mockWorkLogs = [
+	{
+		id: 'picking-631fb04c8fe08f51a8ee5949',
+		shiftId: 'shift-123',
+		referenceId: 'default-picking-work',
+		startDate: '2024-01-15T09:00:00.000Z',
+		endDate: '2024-01-15T17:00:00.000Z',
+		status: 'finished',
+		name: 'Picking from store',
+	},
+	{
+		id: '631fb04c8fe08f51a8ee5950',
+		shiftId: 'shift-123',
+		referenceId: 'packaging-001',
+		startDate: '2024-01-15T14:00:00.000Z',
+		endDate: '2024-01-15T15:30:00.000Z',
+		status: 'finished',
+		name: 'Packaging',
+	},
+	{
+		id: '631fb04c8fe08f51a8ee5951',
+		shiftId: 'shift-123',
+		referenceId: 'delivery-001',
+		startDate: '2024-01-15T16:00:00.000Z',
+		endDate: undefined,
+		status: 'inProgress',
+		name: 'Delivery',
+	},
+];
+
 export const mockShiftData = {
 	id: 'shift-123',
 	startDate: '2024-01-15T09:00:00.000Z',
@@ -117,13 +198,13 @@ export const mockFormattedActivities = [
 		name: 'Trabajo Principal',
 		startTime: '2024-01-15T10:00:00.000Z',
 		endTime: '2024-01-15T12:00:00.000Z',
-		duration: 7200, // 2 horas en segundos
+		duration: 7200000, // 2 horas en milisegundos
 	},
 	{
 		type: 'pause',
 		name: 'Pausa',
 		startTime: '2024-01-15T11:00:00.000Z',
 		endTime: '2024-01-15T11:30:00.000Z',
-		duration: 1800, // 30 minutos en segundos
+		duration: 1800000, // 30 minutos en milisegundos
 	},
 ];
