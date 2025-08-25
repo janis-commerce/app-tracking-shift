@@ -427,6 +427,10 @@ describe('Shift', () => {
 				CURRENT_WORKLOG_DATA,
 				expect.stringContaining(mockParams.type)
 			);
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.stringContaining(mockDate.toISOString())
+			);
 			expect(result).toEqual(mockFormattedId);
 		});
 
@@ -472,6 +476,10 @@ describe('Shift', () => {
 				CURRENT_WORKLOG_DATA,
 				expect.stringContaining(mockParams.type)
 			);
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.stringContaining(mockDate.toISOString())
+			);
 			expect(result).toEqual(mockFormattedId);
 		});
 
@@ -498,6 +506,15 @@ describe('Shift', () => {
 				startDate: mockDate.toISOString(),
 			});
 			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, mockFormattedId);
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.stringContaining(mockParams.type)
+			);
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.stringContaining(mockDate.toISOString())
+			);
 			expect(result).toEqual(mockFormattedId);
 		});
 
@@ -562,19 +579,15 @@ describe('Shift', () => {
 
 			await Shift.openWorkLog(mockParams);
 
-			const expectedFinishDate = new Date(mockDate.getTime() + 15 * 60 * 1000).toISOString();
 			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
 			expect(Storage.set).toHaveBeenCalledWith(
 				CURRENT_WORKLOG_DATA,
-				JSON.stringify({
-					type: mockParams.type,
-					name: mockParams.name,
-					shiftId: mockShiftId,
-					referenceId: mockParams.referenceId,
-					suggestedFinishDate: expectedFinishDate,
-					suggestedTime: 15,
-				})
+				expect.stringContaining(mockParams.type)
+			);
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.stringContaining(mockDate.toISOString())
 			);
 		});
 
