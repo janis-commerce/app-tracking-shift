@@ -90,6 +90,7 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		open: jest.fn(),
 		finish: jest.fn(),
 		getShiftTrackedWorkLogs: jest.fn(),
+		getList: jest.fn(),
 		postPendingBatch: jest.fn(),
 	},
 }));
@@ -101,6 +102,8 @@ jest.mock('../lib/Formatter', () => ({
 		formatShiftActivities: jest.fn(),
 		formatWorkLogTypes: jest.fn(),
 		formatWorkLogId: jest.fn(),
+		formatWorkLogsFromJanis: jest.fn(),
+		splitWorkLogsByStatus: jest.fn(),
 		formatOfflineWorkLog: jest.fn(),
 	},
 }));
@@ -170,6 +173,15 @@ jest.mock('../lib/TrackerRecords', () => ({
 		getEndDateById: jest.fn(),
 		getClientShiftActivities: jest.fn(),
 	},
+}));
+
+// Mock utils/provider functions
+jest.mock('../lib/utils/provider', () => ({
+	openShift: jest.fn(),
+	downloadWorkLogTypes: jest.fn(),
+	isAuthorizedToUseStaffMS: jest.fn(),
+	getShiftWorkLogsFromJanis: jest.fn(),
+	saveWorkLogTimesInDB: jest.fn(),
 }));
 
 // Mock OfflineData
