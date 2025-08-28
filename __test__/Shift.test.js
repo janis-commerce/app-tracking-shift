@@ -35,12 +35,16 @@ const RealDate = Date;
 describe('Shift', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		jest.restoreAllMocks(); // Restaura todos los spies para evitar interferencias
 
 		// Restaurar comportamiento por defecto de OfflineData
 		mockOfflineData.save.mockImplementation(() => {});
 		mockOfflineData.get.mockReturnValue([]);
 		mockOfflineData.delete.mockImplementation(() => {});
 		mockOfflineData.deleteAll.mockImplementation(() => {});
+
+		// Resetear getObject mock completamente para evitar interferencias
+		getObject.mockReset();
 
 		// Mock de Date simplificado
 		global.Date = jest.fn((dateString) => {
@@ -168,32 +172,30 @@ describe('Shift', () => {
 				endDate: mockDate.toISOString(),
 			};
 
-			// Mock para OfflineData con datos pendientes
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
+
 			mockOfflineData.hasData = true;
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
 			mockOfflineData.deleteAll.mockImplementation(() => {});
 
-			// Mock para Formatter
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 
-			// Mock para ShiftWorklogs.postPendingBatch
 			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
 
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
 			});
+			getObject.mockReturnValueOnce(mockShiftData);
 			getShiftData.mockReturnValueOnce({...mockShiftData, id: mockShiftId});
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
 			const result = await Shift.finish();
 
-			// Verificar que se llamó sendPendingWorkLogs
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
 			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 
-			// Verificar comportamiento normal del finish
 			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
@@ -213,23 +215,67 @@ describe('Shift', () => {
 				endDate: mockDate.toISOString(),
 			};
 
-			// Mock para OfflineData sin datos pendientes
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
 			mockOfflineData.hasData = false;
 
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
 			});
+			getObject.mockReturnValueOnce(mockShiftData);
 			getShiftData.mockReturnValueOnce({...mockShiftData, id: mockShiftId});
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
 			const result = await Shift.finish();
 
-			// Verificar que NO se llamó sendPendingWorkLogs
 			expect(mockOfflineData.get).not.toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).not.toHaveBeenCalled();
 			expect(ShiftWorklogs.postPendingBatch).not.toHaveBeenCalled();
 
-			// Verificar comportamiento normal del finish
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
+			expect(Storage.set).toHaveBeenCalledWith(
+				SHIFT_DATA,
+				JSON.stringify(expectedUpdatedShiftData)
+			);
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(StaffService.closeShift).toHaveBeenCalled();
+			expect(TimeTracker.addEvent).toHaveBeenCalled();
+			expect(result).toBe(mockShiftId);
+		});
+
+		it('should reopen a shift if it is expired before to finish', async () => {
+			const mockShiftId = 'shift-999';
+			const expectedUpdatedShiftData = {
+				...mockShiftData,
+				id: mockShiftId,
+				endDate: mockDate.toISOString(),
+			};
+
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(true);
+			jest.spyOn(Shift, 'isDateMaxToCloseExceeded').mockReturnValueOnce(false);
+
+			mockOfflineData.hasData = true;
+			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
+			mockOfflineData.deleteAll.mockImplementation(() => {});
+
+			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
+
+			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
+
+			StaffService.closeShift.mockResolvedValueOnce({
+				result: {id: mockShiftId},
+			});
+			getObject.mockReturnValueOnce(mockShiftData);
+			getObject.mockReturnValueOnce(mockShiftData);
+			getShiftData.mockReturnValueOnce({...mockShiftData, id: mockShiftId});
+			TimeTracker.addEvent.mockResolvedValueOnce();
+
+			const result = await Shift.finish();
+
+			expect(mockOfflineData.get).toHaveBeenCalled();
+			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
+			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
+			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
+
 			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
@@ -250,9 +296,12 @@ describe('Shift', () => {
 				endDate: specificDate,
 			};
 
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
+
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
 			});
+			getObject.mockReturnValueOnce(mockShiftData);
 			getShiftData.mockReturnValueOnce({...mockShiftData, id: mockShiftId});
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
@@ -275,9 +324,12 @@ describe('Shift', () => {
 				endDate: specificDate,
 			};
 
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
+
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: undefined,
 			});
+			getObject.mockReturnValueOnce(mockShiftData);
 			getShiftData.mockReturnValueOnce(mockShiftData);
 			TimeTracker.addEvent.mockResolvedValueOnce();
 
@@ -295,6 +347,9 @@ describe('Shift', () => {
 
 		it('should handle staff service errors', async () => {
 			const error = new Error('Close shift failed');
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
+			getObject.mockReturnValueOnce(mockShiftData);
+
 			StaffService.closeShift.mockRejectedValueOnce(error);
 
 			await expect(Shift.finish()).rejects.toThrow('Close shift failed');
@@ -310,9 +365,12 @@ describe('Shift', () => {
 				endDate: mockDate.toISOString(),
 			};
 
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
+
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
 			});
+			getObject.mockReturnValueOnce(mockShiftData);
 			getShiftData.mockReturnValueOnce({...mockShiftData, id: mockShiftId});
 			TimeTracker.addEvent.mockRejectedValueOnce(new Error('Tracking failed'));
 
@@ -1312,6 +1370,28 @@ describe('Shift', () => {
 
 	describe('sendPendingWorkLogs', () => {
 		it('should send pending worklogs successfully', async () => {
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
+
+			getObject.mockReturnValueOnce(mockShiftData);
+			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
+			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
+			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
+
+			const result = await Shift.sendPendingWorkLogs();
+
+			expect(mockOfflineData.get).toHaveBeenCalled();
+			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
+			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
+			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
+			expect(result).toBe(null);
+		});
+
+		it('should reopen a shift if it is expired before to send pending worklogs', async () => {
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(true);
+			jest.spyOn(Shift, 'isDateMaxToCloseExceeded').mockReturnValueOnce(false);
+
+			getObject.mockReturnValueOnce(mockShiftData);
+			getObject.mockReturnValueOnce(mockShiftData);
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
@@ -1339,7 +1419,10 @@ describe('Shift', () => {
 		});
 
 		it('should handle sendPendingWorkLogs error', async () => {
+			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
+
 			const error = new Error('Send pending worklogs failed');
+			getObject.mockReturnValueOnce(mockShiftData);
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 			ShiftWorklogs.postPendingBatch.mockRejectedValueOnce(error);
