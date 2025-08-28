@@ -12,3 +12,4 @@
 - Methods to init and finish worklogs
 - Method to get shift report
 - WithTrackingShift hoc
+- Possibility to work offline
