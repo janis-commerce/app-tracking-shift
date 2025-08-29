@@ -195,7 +195,7 @@ jest.mock('../lib/utils/storage', () => ({
 	__esModule: true,
 	getShiftData: jest.fn(),
 	getWorkLogTypesData: jest.fn(),
-	getStaffAuthorizationData: jest.fn(),
+	getStaffAuthorizationData: jest.fn(() => ({hasStaffAuthorization: true})),
 	setObject: jest.fn(),
 	getObject: jest.fn(),
 }));

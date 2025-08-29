@@ -23,7 +23,7 @@ import {
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
 import TrackerRecords from '../lib/TrackerRecords';
-import {getShiftData, getObject} from '../lib/utils/storage';
+import {getShiftData, getObject, getStaffAuthorizationData} from '../lib/utils/storage';
 import Formatter from '../lib/Formatter';
 import Shift from '../lib/Shift';
 import OfflineData from '../lib/OfflineData';
@@ -60,6 +60,15 @@ describe('Shift', () => {
 	});
 
 	describe('open', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			// Mock getStaffAuthorizationData to return false for this test
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.open()).rejects.toThrow('Staff MS authorization is required');
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should start a shift successfully', async () => {
 			const mockShiftId = 'shift-123';
 			const mockOpenShift = {id: mockShiftId, startDate: '2024-01-15T10:00:00.000Z'};
@@ -164,6 +173,14 @@ describe('Shift', () => {
 	});
 
 	describe('finish', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.finish()).rejects.toThrow('Staff MS authorization is required');
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should finish a shift successfully and send pending worklogs', async () => {
 			const mockShiftId = 'shift-999';
 			const expectedUpdatedShiftData = {
@@ -389,6 +406,14 @@ describe('Shift', () => {
 	});
 
 	describe('getUserOpenShift', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.getUserOpenShift()).rejects.toThrow('Staff MS authorization is required');
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should get user open shift successfully', async () => {
 			const mockShift = {id: 'shift-123', status: 'opened'};
 			StaffService.getShiftsList.mockResolvedValueOnce({
@@ -426,6 +451,14 @@ describe('Shift', () => {
 	});
 
 	describe('fetchWorklogTypes', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.fetchWorklogTypes()).rejects.toThrow('Staff MS authorization is required');
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should fetch worklog types successfully', async () => {
 			StaffService.getWorkLogTypes.mockResolvedValueOnce({
 				result: worklogTypes,
@@ -514,6 +547,16 @@ describe('Shift', () => {
 	});
 
 	describe('openWorkLog', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.openWorkLog({referenceId: 'test'})).rejects.toThrow(
+				'Staff MS authorization is required'
+			);
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should open worklog successfully and pause shift for normal activities', async () => {
 			const mockShiftId = 'shift-123';
 			const mockFormattedId = 'ref-123-mock-random-id';
@@ -774,6 +817,16 @@ describe('Shift', () => {
 	});
 
 	describe('finishWorkLog', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.finishWorkLog({referenceId: 'test'})).rejects.toThrow(
+				'Staff MS authorization is required'
+			);
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should finish worklog successfully', async () => {
 			const mockShiftId = 'shift-123';
 			const mockShiftStatus = 'opened';
@@ -1278,6 +1331,16 @@ describe('Shift', () => {
 	});
 
 	describe('getWorkLogs', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.getWorkLogs('shift-123')).rejects.toThrow(
+				'Staff MS authorization is required'
+			);
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should get work logs successfully when shiftId is provided as argument', async () => {
 			const mockShiftId = 'shift-123';
 			ShiftWorklogs.getList.mockResolvedValueOnce(mockWorkLogsRaw);
@@ -1369,6 +1432,16 @@ describe('Shift', () => {
 	});
 
 	describe('sendPendingWorkLogs', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.sendPendingWorkLogs()).rejects.toThrow(
+				'Staff MS authorization is required'
+			);
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		it('should send pending worklogs successfully', async () => {
 			jest.spyOn(Shift, 'isDateToCloseExceeded').mockReturnValueOnce(false);
 
@@ -1433,6 +1506,14 @@ describe('Shift', () => {
 	});
 
 	describe('reOpen', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.reOpen()).rejects.toThrow('Staff MS authorization is required');
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
 		const storageData = {
 			dateMaxToClose: '2024-01-15T20:00:00.000Z', // Fecha futura (9.5 horas después del mockDate)
 		};
