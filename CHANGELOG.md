@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- a conflict with dependencies
+
 ## [1.1.0] - 2025-09-01
 
 ### Added
