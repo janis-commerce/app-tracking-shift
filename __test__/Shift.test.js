@@ -1519,7 +1519,7 @@ describe('Shift', () => {
 		};
 		it('should reopen shift successfully and extend closing date', async () => {
 			jest.spyOn(Shift, 'isDateMaxToCloseExceeded').mockReturnValueOnce(false);
-			getObject.mockReturnValueOnce(storageData);
+			getObject.mockReturnValueOnce({...storageData, reopeningExtensionTime: 1});
 			StaffService.openShift.mockResolvedValueOnce({});
 
 			const result = await Shift.reOpen();
