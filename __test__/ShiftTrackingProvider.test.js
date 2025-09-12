@@ -6,9 +6,8 @@ import {
 	downloadWorkLogTypes,
 	isAuthorizedToUseStaffMS,
 	getShiftWorkLogsFromJanis,
-	saveWorkLogTimesInDB,
 } from '../lib/utils/provider';
-import {mockMMKV, mockCrashlytics} from '../__mocks__';
+import {mockMMKV} from '../__mocks__';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 import * as Helpers from '../lib/utils/helpers';
 
@@ -54,7 +53,6 @@ describe('ShiftTrackingProvider', () => {
 			openWorkLogs: [],
 			closedWorkLogs: [],
 		});
-		saveWorkLogTimesInDB.mockResolvedValue(true);
 	});
 
 	describe('Staff Authorization Validation', () => {
@@ -466,93 +464,6 @@ describe('ShiftTrackingProvider', () => {
 					message: workLogsError.message,
 					type: 'getWorkLogsFromJanis',
 				});
-			});
-		});
-
-		it('should process workLogs and save them to storage when successful', async () => {
-			const mockWorkLogs = {
-				openWorkLogs: [
-					{
-						id: 'worklog-1',
-						referenceId: 'regular-work',
-						name: 'Regular Work',
-						startDate: '2023-01-01T10:00:00Z',
-						endDate: null,
-					},
-				],
-				closedWorkLogs: [
-					{
-						id: 'worklog-2',
-						referenceId: 'completed-work',
-						name: 'Completed Work',
-						startDate: '2023-01-01T09:00:00Z',
-						endDate: '2023-01-01T10:00:00Z',
-					},
-				],
-			};
-
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: true,
-			});
-			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
-			getShiftWorkLogsFromJanis.mockResolvedValueOnce(mockWorkLogs);
-
-			render(
-				<ShiftTrackingProvider>
-					<div>Test Child</div>
-				</ShiftTrackingProvider>
-			);
-
-			await waitFor(() => {
-				expect(saveWorkLogTimesInDB).toHaveBeenCalledTimes(2);
-				expect(saveWorkLogTimesInDB).toHaveBeenCalledWith(mockWorkLogs.openWorkLogs[0]);
-				expect(saveWorkLogTimesInDB).toHaveBeenCalledWith(mockWorkLogs.closedWorkLogs[0]);
-			});
-		});
-
-		it('should call Crashlytics.recordError when saveWorkLogTimesInDB fails', async () => {
-			const mockWorkLogs = {
-				openWorkLogs: [
-					{
-						id: 'worklog-1',
-						referenceId: 'regular-work',
-						name: 'Regular Work',
-						startDate: '2023-01-01T10:00:00Z',
-						endDate: null,
-					},
-				],
-				closedWorkLogs: [
-					{
-						id: 'worklog-2',
-						referenceId: 'completed-work',
-						name: 'Completed Work',
-						startDate: '2023-01-01T09:00:00Z',
-						endDate: '2023-01-01T10:00:00Z',
-					},
-				],
-			};
-
-			const saveError = new Error('Failed to save worklog');
-
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: true,
-			});
-			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
-			getShiftWorkLogsFromJanis.mockResolvedValueOnce(mockWorkLogs);
-			saveWorkLogTimesInDB.mockRejectedValue(saveError);
-
-			render(
-				<ShiftTrackingProvider>
-					<div>Test Child</div>
-				</ShiftTrackingProvider>
-			);
-
-			await waitFor(() => {
-				expect(mockCrashlytics.recordError).toHaveBeenCalledTimes(2);
 			});
 		});
 

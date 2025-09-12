@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- internal logic to openWorklog and finishWorkLog to manage ongoing activities
+
+### Changed
+
+- removed realm and event-tracker from project. Any storage operations are now handled by React-Native-MMKV.
+
 ### Fixed
 
 - a conflict with dependencies
