@@ -136,13 +136,6 @@ export const mockShiftData = {
 	userModified: '7e1fc1eeb5b68406e048796',
 };
 
-// Mock para TrackerRecords
-export const mockTrackerRecords = {
-	getWorkLogsFromTimeTracker: jest.fn(),
-	getStartDateById: jest.fn(),
-	getEndDateById: jest.fn(),
-};
-
 // Datos de ejemplo para workLogsEvents
 export const mockWorkLogsEvents = [
 	{
@@ -244,6 +237,7 @@ export const mockOfflineData = {
 	save: jest.fn(),
 	delete: jest.fn(),
 	deleteAll: jest.fn(),
+	getLastRecord: jest.fn(() => null),
 };
 
 // Mock para respuestas de postWorklog con batch de pendientes
@@ -253,3 +247,6 @@ export const mockPostWorklogBatchResponse = {
 		itemsUpdated: [],
 	},
 };
+
+// Mock para deleteStoredWorkLog
+export const mockDeleteStoredWorkLog = jest.fn();

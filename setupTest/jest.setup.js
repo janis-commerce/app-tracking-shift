@@ -1,19 +1,14 @@
 import {
 	mockRequest,
-	mockTimeTracker,
 	mockCrashlytics,
 	mockMMKV,
 	mockOfflineData,
+	mockDeleteStoredWorkLog,
 } from '../__mocks__';
 
 jest.mock('@janiscommerce/app-request', () => ({
 	__esModule: true,
 	default: jest.fn().mockImplementation(() => mockRequest),
-}));
-
-jest.mock('@janiscommerce/app-tracking-time', () => ({
-	__esModule: true,
-	default: jest.fn().mockImplementation(() => mockTimeTracker),
 }));
 
 jest.mock('../lib/utils/crashlytics', () => ({
@@ -108,14 +103,6 @@ jest.mock('../lib/Formatter', () => ({
 	},
 }));
 
-// Mock TimeTracker
-jest.mock('../lib/db/TimeTrackerService', () => ({
-	addEvent: jest.fn(),
-	deleteAllEvents: jest.fn(),
-	getElapsedTime: jest.fn(),
-	searchEventByQuery: jest.fn(),
-}));
-
 // Mock StorageService
 jest.mock('../lib/db/StorageService', () => ({
 	__esModule: true,
@@ -164,24 +151,12 @@ jest.mock('../lib/utils/helpers', () => {
 	};
 });
 
-// Mock TrackerRecords
-jest.mock('../lib/TrackerRecords', () => ({
-	__esModule: true,
-	default: {
-		getWorkLogsFromTimeTracker: jest.fn(),
-		getStartDateById: jest.fn(),
-		getEndDateById: jest.fn(),
-		getClientShiftActivities: jest.fn(),
-	},
-}));
-
 // Mock utils/provider functions
 jest.mock('../lib/utils/provider', () => ({
 	openShift: jest.fn(),
 	downloadWorkLogTypes: jest.fn(),
 	isAuthorizedToUseStaffMS: jest.fn(),
 	getShiftWorkLogsFromJanis: jest.fn(),
-	saveWorkLogTimesInDB: jest.fn(),
 }));
 
 // Mock OfflineData
@@ -198,4 +173,5 @@ jest.mock('../lib/utils/storage', () => ({
 	getStaffAuthorizationData: jest.fn(() => ({hasStaffAuthorization: true})),
 	setObject: jest.fn(),
 	getObject: jest.fn(),
+	deleteStoredWorkLog: mockDeleteStoredWorkLog,
 }));
