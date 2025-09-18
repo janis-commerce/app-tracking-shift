@@ -387,6 +387,10 @@ describe('Shift', () => {
 
 			const result = await Shift.getUserOpenShift({userId: 'user-123', id: 'shift-123'});
 
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('getUserOpenShift:', {
+				userId: 'user-123',
+				id: 'shift-123',
+			});
 			expect(StaffService.getShiftsList).toHaveBeenCalledWith({
 				filters: {
 					userId: 'user-123',
@@ -496,7 +500,7 @@ describe('Shift', () => {
 
 			const result = await Shift.deleteShiftRegisters();
 
-			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('deleteShiftRegisters:');
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 			expect(result).toBe(true);
 		});
@@ -548,7 +552,7 @@ describe('Shift', () => {
 
 			const result = await Shift.openWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			// expect(ShiftWorklogs.open).toHaveBeenCalledWith({
 			// 	referenceId: mockParams.referenceId,
@@ -586,7 +590,7 @@ describe('Shift', () => {
 
 			const result = await Shift.openWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			// expect(ShiftWorklogs.open).toHaveBeenCalledWith({
 			// 	referenceId: mockParams.referenceId,
@@ -624,7 +628,7 @@ describe('Shift', () => {
 
 			const result = await Shift.openWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			// expect(ShiftWorklogs.open).toHaveBeenCalledWith({
 			// 	referenceId: mockParams.referenceId,
@@ -664,7 +668,7 @@ describe('Shift', () => {
 			});
 
 			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('OfflineData save failed');
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			// expect(ShiftWorklogs.open).toHaveBeenCalled();
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
@@ -688,7 +692,7 @@ describe('Shift', () => {
 
 			const result = await Shift.openWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			// expect(ShiftWorklogs.open).toHaveBeenCalled();
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
@@ -734,7 +738,7 @@ describe('Shift', () => {
 		it('should return null when no arguments are passed to openWorkLog', async () => {
 			const result = await Shift.openWorkLog();
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', {});
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', {});
 			expect(result).toBeNull();
 			expect(ShiftWorklogs.open).not.toHaveBeenCalled();
 			expect(Storage.set).not.toHaveBeenCalled();
@@ -743,7 +747,7 @@ describe('Shift', () => {
 		it('should return null when empty object is passed to openWorkLog', async () => {
 			const result = await Shift.openWorkLog({});
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', {});
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', {});
 			expect(result).toBeNull();
 			expect(ShiftWorklogs.open).not.toHaveBeenCalled();
 			expect(Storage.set).not.toHaveBeenCalled();
@@ -752,7 +756,7 @@ describe('Shift', () => {
 		it('should return null when null is passed to openWorkLog', async () => {
 			const result = await Shift.openWorkLog(null);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', null);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', null);
 			expect(result).toBeNull();
 			expect(ShiftWorklogs.open).not.toHaveBeenCalled();
 			expect(Storage.set).not.toHaveBeenCalled();
@@ -798,7 +802,7 @@ describe('Shift', () => {
 			expect(finishWorkLogSpy).toHaveBeenCalledWith(mockCurrentWorkLog);
 
 			// Verificar que se abrió el nuevo worklog correctamente
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user open shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(Formatter.formatWorkLogId).toHaveBeenCalled();
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
 				referenceId: mockParams.referenceId,
@@ -848,7 +852,7 @@ describe('Shift', () => {
 
 			const result = await Shift.finishWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			// expect(ShiftWorklogs.finish).toHaveBeenCalledWith({
 			// 	referenceId: mockParams.referenceId,
 			// 	endDate: mockDate.toISOString(),
@@ -881,7 +885,7 @@ describe('Shift', () => {
 
 			const result = await Shift.finishWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			// expect(ShiftWorklogs.finish).toHaveBeenCalledWith({
 			// 	referenceId: mockParams.referenceId,
 			// 	endDate: mockDate.toISOString(),
@@ -917,7 +921,7 @@ describe('Shift', () => {
 			});
 
 			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow('OfflineData save failed');
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			// expect(ShiftWorklogs.finish).toHaveBeenCalled();
 			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
 				referenceId: mockParams.referenceId,
@@ -946,7 +950,7 @@ describe('Shift', () => {
 
 			const result = await Shift.finishWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			// expect(ShiftWorklogs.finish).toHaveBeenCalled();
 			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
 				referenceId: mockParams.referenceId,
@@ -975,7 +979,7 @@ describe('Shift', () => {
 
 			const result = await Shift.finishWorkLog(mockParams);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			// expect(ShiftWorklogs.finish).toHaveBeenCalledWith({
 			// 	referenceId: mockParams.referenceId,
 			// 	endDate: mockDate.toISOString(),
@@ -1021,7 +1025,7 @@ describe('Shift', () => {
 		it('should return null when no arguments are passed to finishWorkLog', async () => {
 			const result = await Shift.finishWorkLog();
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', {});
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', {});
 			expect(result).toBeNull();
 			expect(ShiftWorklogs.finish).not.toHaveBeenCalled();
 			expect(Storage.set).not.toHaveBeenCalled();
@@ -1031,7 +1035,7 @@ describe('Shift', () => {
 		it('should return null when empty object is passed to finishWorkLog', async () => {
 			const result = await Shift.finishWorkLog({});
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', {});
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', {});
 			expect(result).toBeNull();
 			expect(ShiftWorklogs.finish).not.toHaveBeenCalled();
 			expect(Storage.set).not.toHaveBeenCalled();
@@ -1041,7 +1045,7 @@ describe('Shift', () => {
 		it('should return null when null is passed to finishWorkLog', async () => {
 			const result = await Shift.finishWorkLog(null);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', null);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', null);
 			expect(result).toBeNull();
 			expect(ShiftWorklogs.finish).not.toHaveBeenCalled();
 			expect(Storage.set).not.toHaveBeenCalled();
@@ -1061,7 +1065,7 @@ describe('Shift', () => {
 			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow(
 				'There is no active worklog to close'
 			);
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 
@@ -1083,7 +1087,7 @@ describe('Shift', () => {
 			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow(
 				'The worklog you are trying to close is different from the one that is currently open.'
 			);
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user close shift worklog', mockParams);
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 	});
@@ -1178,7 +1182,7 @@ describe('Shift', () => {
 
 			const result = await Shift.getWorkLogs(mockShiftId);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('getWorkLogs:');
 			expect(ShiftWorklogs.getList).toHaveBeenCalledWith(mockShiftId);
 			expect(Formatter.formatWorkLogsFromJanis).toHaveBeenCalledWith(mockWorkLogsRaw);
 			expect(result).toEqual(mockWorkLogs);
@@ -1192,7 +1196,7 @@ describe('Shift', () => {
 
 			const result = await Shift.getWorkLogs();
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('getWorkLogs:');
 			expect(Storage.getString).toHaveBeenCalledWith(SHIFT_ID);
 			expect(ShiftWorklogs.getList).toHaveBeenCalledWith(mockShiftId);
 			expect(Formatter.formatWorkLogsFromJanis).toHaveBeenCalledWith(mockWorkLogsRaw);
@@ -1203,7 +1207,7 @@ describe('Shift', () => {
 			Storage.getString.mockReturnValueOnce(undefined);
 
 			await expect(Shift.getWorkLogs()).rejects.toThrow('Shift ID not found');
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user get work logs');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('getWorkLogs:');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 			expect(ShiftWorklogs.getList).not.toHaveBeenCalled();
 		});
@@ -1282,6 +1286,7 @@ describe('Shift', () => {
 
 			const result = await Shift.sendPendingWorkLogs();
 
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('sendPendingWorkLogs:');
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
 			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
@@ -1354,7 +1359,7 @@ describe('Shift', () => {
 
 			const result = await Shift.reOpen();
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user re open shift');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('reOpenShift:');
 			expect(Shift.isDateMaxToCloseExceeded).toHaveBeenCalled();
 			expect(StaffService.openShift).toHaveBeenCalled();
 			expect(result).toBe(null);
@@ -1369,7 +1374,7 @@ describe('Shift', () => {
 				'The deadline for ending the shift has been exceeded'
 			);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('user re open shift');
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('reOpenShift:');
 			expect(Shift.isDateMaxToCloseExceeded).toHaveBeenCalled();
 			expect(StaffService.openShift).not.toHaveBeenCalled();
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();

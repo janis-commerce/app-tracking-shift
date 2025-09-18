@@ -13,6 +13,8 @@
 ### Fixed
 
 - a conflict with dependencies
+- error argument reported for crashlytics recordError
+- error format returned by shift methods, now all errors have the same standard format
 
 ## [1.1.0] - 2025-09-01
 
