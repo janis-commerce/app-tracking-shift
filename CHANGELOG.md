@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-09-18
+
 ### Added
 
 - internal logic to openWorklog and finishWorkLog to manage ongoing activities
