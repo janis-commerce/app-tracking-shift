@@ -296,7 +296,3 @@ The library uses the following storage keys (managed automatically):
 ## Contributing
 
 This package is maintained by Janis Commerce. For issues and feature requests, please use the [GitHub Issues](https://github.com/janis-commerce/app-tracking-shift/issues).
-
-## License
-
-MIT © [Janis Commerce](https://github.com/janis-commerce)
