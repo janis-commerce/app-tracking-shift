@@ -31,7 +31,6 @@ export const mockMMKV = {
 	getString: jest.fn(),
 	getNumber: jest.fn(),
 	getBoolean: jest.fn(),
-	getObject: jest.fn(),
 	getBuffer: jest.fn(),
 	delete: jest.fn(),
 	clearAll: jest.fn(),
@@ -247,6 +246,3 @@ export const mockPostWorklogBatchResponse = {
 		itemsUpdated: [],
 	},
 };
-
-// Mock para deleteStoredWorkLog
-export const mockDeleteStoredWorkLog = jest.fn();

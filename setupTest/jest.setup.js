@@ -1,10 +1,4 @@
-import {
-	mockRequest,
-	mockCrashlytics,
-	mockMMKV,
-	mockOfflineData,
-	mockDeleteStoredWorkLog,
-} from '../__mocks__';
+import {mockRequest, mockCrashlytics, mockMMKV, mockOfflineData} from '../__mocks__';
 
 jest.mock('@janiscommerce/app-request', () => ({
 	__esModule: true,
@@ -66,6 +60,7 @@ jest.mock('@janiscommerce/app-device-info', () => ({
 	getApplicationName: jest.fn(),
 	getDeviceScreenMeasurements: jest.fn(),
 	getNetworkState: jest.fn(),
+	getInternetReachability: jest.fn(),
 	getUniqueId: jest.fn(),
 }));
 
@@ -86,7 +81,7 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		finish: jest.fn(),
 		getShiftTrackedWorkLogs: jest.fn(),
 		getList: jest.fn(),
-		postPendingBatch: jest.fn(),
+		batch: jest.fn(),
 	},
 }));
 
@@ -168,10 +163,6 @@ jest.mock('../lib/OfflineData', () => ({
 // Mock utils/storage
 jest.mock('../lib/utils/storage', () => ({
 	__esModule: true,
-	getShiftData: jest.fn(),
 	getWorkLogTypesData: jest.fn(),
 	getStaffAuthorizationData: jest.fn(() => ({hasStaffAuthorization: true})),
-	setObject: jest.fn(),
-	getObject: jest.fn(),
-	deleteStoredWorkLog: mockDeleteStoredWorkLog,
 }));

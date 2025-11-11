@@ -192,7 +192,7 @@ describe('Shift', () => {
 
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 
-			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
+			ShiftWorklogs.batch.mockResolvedValueOnce(null);
 
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
@@ -204,7 +204,7 @@ describe('Shift', () => {
 
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
-			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
+			expect(ShiftWorklogs.batch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 
 			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
@@ -235,7 +235,7 @@ describe('Shift', () => {
 
 			expect(mockOfflineData.get).not.toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).not.toHaveBeenCalled();
-			expect(ShiftWorklogs.postPendingBatch).not.toHaveBeenCalled();
+			expect(ShiftWorklogs.batch).not.toHaveBeenCalled();
 
 			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(setObject).toHaveBeenCalledWith(SHIFT_DATA, expectedUpdatedShiftData);
@@ -261,7 +261,7 @@ describe('Shift', () => {
 
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 
-			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
+			ShiftWorklogs.batch.mockResolvedValueOnce(null);
 
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
@@ -274,7 +274,7 @@ describe('Shift', () => {
 
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
-			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
+			expect(ShiftWorklogs.batch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 
 			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
@@ -1282,14 +1282,14 @@ describe('Shift', () => {
 			getObject.mockReturnValueOnce(mockShiftData);
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
-			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
+			ShiftWorklogs.batch.mockResolvedValueOnce(null);
 
 			const result = await Shift.sendPendingWorkLogs();
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('sendPendingWorkLogs:');
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
-			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
+			expect(ShiftWorklogs.batch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 			expect(result).toBe(null);
 		});
@@ -1302,13 +1302,13 @@ describe('Shift', () => {
 			getObject.mockReturnValueOnce(mockShiftData);
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
-			ShiftWorklogs.postPendingBatch.mockResolvedValueOnce(null);
+			ShiftWorklogs.batch.mockResolvedValueOnce(null);
 
 			const result = await Shift.sendPendingWorkLogs();
 
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith(mockPendingWorkLogs);
-			expect(ShiftWorklogs.postPendingBatch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
+			expect(ShiftWorklogs.batch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 			expect(result).toBe(null);
 		});
@@ -1321,7 +1321,7 @@ describe('Shift', () => {
 
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(Formatter.formatOfflineWorkLog).toHaveBeenCalledWith([]);
-			expect(ShiftWorklogs.postPendingBatch).not.toHaveBeenCalled();
+			expect(ShiftWorklogs.batch).not.toHaveBeenCalled();
 			expect(mockOfflineData.deleteAll).not.toHaveBeenCalled();
 			expect(result).toBe(null);
 		});
@@ -1333,7 +1333,7 @@ describe('Shift', () => {
 			getObject.mockReturnValueOnce(mockShiftData);
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
 			Formatter.formatOfflineWorkLog.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
-			ShiftWorklogs.postPendingBatch.mockRejectedValueOnce(error);
+			ShiftWorklogs.batch.mockRejectedValueOnce(error);
 
 			await expect(Shift.sendPendingWorkLogs()).rejects.toThrow('Send pending worklogs failed');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
