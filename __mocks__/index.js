@@ -37,7 +37,9 @@ export const mockMMKV = {
 	contains: jest.fn(() => false),
 	getAllKeys: jest.fn(() => []),
 	recursiveDelete: jest.fn(),
-	addOnValueChangedListener: jest.fn(() => () => {}),
+	addOnValueChangedListener: jest.fn(() => ({
+		remove: jest.fn(),
+	})),
 };
 
 // Mock para WorkLogs (raw data)
@@ -236,7 +238,6 @@ export const mockOfflineData = {
 	save: jest.fn(),
 	delete: jest.fn(),
 	deleteAll: jest.fn(),
-	getLastRecord: jest.fn(() => null),
 };
 
 // Mock para respuestas de postWorklog con batch de pendientes
@@ -245,4 +246,13 @@ export const mockPostWorklogBatchResponse = {
 		itemsCreated: [{id: 'worklog-batch-1'}, {id: 'worklog-batch-2'}],
 		itemsUpdated: [],
 	},
+};
+
+export const mockStorageClass = {
+	db: {
+		...mockMMKV,
+	},
+	get: jest.fn(),
+	set: jest.fn(),
+	remove: jest.fn(),
 };
