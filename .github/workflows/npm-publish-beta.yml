@@ -34,7 +34,9 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
-        run: npm i
+        run: npm ci
+        env:
+          NPM_TOKEN: ${{ secrets.npm_token }}
 
       - name: Determine npm tag
         id: npm-tag
