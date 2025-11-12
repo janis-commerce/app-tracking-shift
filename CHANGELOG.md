@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.4.0-beta.2] 2025-11-12
+
+### Changed
+
+- names of the methods that check shift expiration
+
 ## [1.4.0-beta.1] 2025-11-12
 
 ### Added
