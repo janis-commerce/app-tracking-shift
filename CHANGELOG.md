@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.4.0-beta.1] 2025-11-12
+
+### Added
+
+- Realtime activity reporting when user has internet connection
+- Beta release workflow
+
 ## [1.3.0] - 2025-11-06
 
 ### Added
