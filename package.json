@@ -1,6 +1,6 @@
 {
 	"name": "@janiscommerce/app-tracking-shift",
-	"version": "1.4.0-beta.1",
+	"version": "1.4.0-beta.2",
 	"main": "lib/index.js",
 	"module": "lib/index.js",
 	"exports": {
