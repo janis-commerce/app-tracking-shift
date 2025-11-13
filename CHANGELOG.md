@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.4.0-beta.4] 2025-11-13
+
+### Added
+
+- properties to get staff authorization and client worklogs
+
 ## [1.4.0-beta.3] 2025-11-12
 
 ### Changed

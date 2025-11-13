@@ -17,6 +17,7 @@ import {
 	CURRENT_WORKLOG_ID,
 	CURRENT_WORKLOG_DATA,
 	EXCLUDED_WORKLOG_TYPES,
+	WORKLOG_TYPES_DATA,
 } from '../lib/constant';
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
@@ -1051,6 +1052,27 @@ describe('Shift', () => {
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('getWorkLogs:');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 			expect(ShiftWorklogs.getList).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('hasWorkTypes', () => {
+		it('should return true when storage has workLogTypes data', () => {
+			const storageData = {workLogTypes: [{id: 'type-1'}]};
+			Storage.get.mockReturnValueOnce(storageData);
+
+			const result = Shift.hasWorkTypes;
+
+			expect(Storage.get).toHaveBeenCalledWith(WORKLOG_TYPES_DATA);
+			expect(result).toBe(true);
+		});
+
+		it('should return false when storage has no data (defaults applied)', () => {
+			Storage.get.mockReturnValueOnce(undefined);
+
+			const result = Shift.hasWorkTypes;
+
+			expect(Storage.get).toHaveBeenCalledWith(WORKLOG_TYPES_DATA);
+			expect(result).toBe(false);
 		});
 	});
 
