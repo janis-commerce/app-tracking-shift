@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+## [1.4.0-beta.4] 2025-11-13
+
+### Added
+
+- properties to get staff authorization and client worklogs
+
+## [1.4.0-beta.3] 2025-11-12
+
+### Changed
+
+- changed shift privates methods visibility
+
+## [1.4.0-beta.2] 2025-11-12
+
+### Changed
+
+- names of the methods that check shift expiration
+
+## [1.4.0-beta.1] 2025-11-12
+
+### Added
+
+- Realtime activity reporting when user has internet connection
+- Beta release workflow
+
 ## [1.3.0] - 2025-11-06
 
 ### Added

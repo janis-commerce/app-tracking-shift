@@ -7,7 +7,7 @@ import {
 	isAuthorizedToUseStaffMS,
 	getShiftWorkLogsFromJanis,
 } from '../lib/utils/provider';
-import {mockMMKV} from '../__mocks__';
+import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 import * as Helpers from '../lib/utils/helpers';
 
@@ -15,7 +15,7 @@ describe('ShiftTrackingProvider', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		// Resetear los valores del mock storage
-		mockMMKV.getString.mockImplementation((key) => {
+		Storage.get.mockImplementation((key) => {
 			const mockData = {
 				'shift.status': 'opened',
 				'shift.id': 'shift-123',
@@ -300,7 +300,7 @@ describe('ShiftTrackingProvider', () => {
 	it('should handle empty storage values gracefully', async () => {
 		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 		// Configurar storage vacío para todas las llamadas
-		mockMMKV.getString.mockReturnValue(null);
+		Storage.get.mockReturnValue(null);
 
 		let contextValue;
 
@@ -318,8 +318,8 @@ describe('ShiftTrackingProvider', () => {
 		await waitFor(() => {
 			expect(getByTestId('empty-test')).toBeDefined();
 			expect(contextValue).toBeDefined();
-			expect(contextValue.shiftId).toBeNull();
-			expect(contextValue.shiftStatus).toBeNull();
+			expect(contextValue.shiftId).toBe(null);
+			expect(contextValue.shiftStatus).toBe(null);
 			expect(contextValue.workLogTypes).toEqual([]);
 			expect(contextValue.error).toBeNull();
 		});
@@ -496,11 +496,17 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(mockMMKV.set).toHaveBeenCalledWith('shift.status', 'paused');
-				expect(mockMMKV.set).toHaveBeenCalledWith('worklog.id', 'worklog-1');
-				expect(mockMMKV.set).toHaveBeenCalledWith(
+				expect(Storage.set).toHaveBeenCalledWith('shift.status', 'paused');
+				expect(Storage.set).toHaveBeenCalledWith('worklog.id', 'worklog-1');
+				expect(Storage.set).toHaveBeenCalledWith(
 					'worklog.data',
-					JSON.stringify(mockWorkLogs.openWorkLogs[0])
+					expect.objectContaining({
+						id: 'worklog-1',
+						referenceId: 'regular-work',
+						name: 'Regular Work',
+						startDate: '2023-01-01T10:00:00Z',
+						endDate: null,
+					})
 				);
 			});
 		});
@@ -535,12 +541,18 @@ describe('ShiftTrackingProvider', () => {
 
 			await waitFor(() => {
 				// Debe guardar el worklog data pero NO cambiar el status a paused
-				expect(mockMMKV.set).toHaveBeenCalledWith('worklog.id', 'picking-worklog-1');
-				expect(mockMMKV.set).toHaveBeenCalledWith(
+				expect(Storage.set).toHaveBeenCalledWith('worklog.id', 'picking-worklog-1');
+				expect(Storage.set).toHaveBeenCalledWith(
 					'worklog.data',
-					JSON.stringify(mockWorkLogs.openWorkLogs[0])
+					expect.objectContaining({
+						id: 'picking-worklog-1',
+						referenceId: 'default-picking-work',
+						name: 'Picking Work',
+						startDate: '2023-01-01T10:00:00Z',
+						endDate: null,
+					})
 				);
-				expect(mockMMKV.set).not.toHaveBeenCalledWith('shift.status', 'paused');
+				expect(Storage.set).not.toHaveBeenCalledWith('shift.status', 'paused');
 			});
 		});
 
