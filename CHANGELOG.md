@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.4.0-beta.5] 2025-11-18
+
+### Changed
+
+- shift finish method will not update the shift status.
+
 ## [1.4.0-beta.4] 2025-11-13
 
 ### Added

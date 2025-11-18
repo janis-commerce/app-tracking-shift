@@ -197,7 +197,6 @@ describe('Shift', () => {
 			expect(ShiftWorklogs.batch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
 				expect.objectContaining({endDate: mockDate.toISOString()})
@@ -224,7 +223,6 @@ describe('Shift', () => {
 			expect(Formatter.formatOfflineWorkLog).not.toHaveBeenCalled();
 			expect(ShiftWorklogs.batch).not.toHaveBeenCalled();
 
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
 				expect.objectContaining({endDate: mockDate.toISOString()})
@@ -260,7 +258,6 @@ describe('Shift', () => {
 			expect(ShiftWorklogs.batch).toHaveBeenCalledWith(mockFormattedOfflineWorkLogs);
 			expect(mockOfflineData.deleteAll).toHaveBeenCalled();
 
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
 				expect.objectContaining({endDate: mockDate.toISOString()})
@@ -284,7 +281,6 @@ describe('Shift', () => {
 
 			const result = await Shift.finish({date: specificDate});
 
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
 				expect.objectContaining({endDate: specificDate})
@@ -306,7 +302,6 @@ describe('Shift', () => {
 
 			const result = await Shift.finish({date: specificDate});
 
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
 				expect.objectContaining({endDate: specificDate})
@@ -341,7 +336,6 @@ describe('Shift', () => {
 
 			const result = await Shift.finish();
 
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'closed');
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
 				expect.objectContaining({endDate: mockDate.toISOString()})
