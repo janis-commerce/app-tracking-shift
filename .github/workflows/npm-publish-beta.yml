@@ -1,12 +1,12 @@
-name: NPM Publish
+name: NPM Publish Beta
 
 on:
   push:
     tags:
-      - '*'
-      - '!*-beta*'
-      - '!*-alpha*'
-      - '!*-rc*'
+      - '*-beta*'
+      - '*-alpha*'
+      - '*-rc*'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,6 +24,7 @@ jobs:
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
+    environment: beta
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,9 +32,24 @@ jobs:
           node-version: 18.x
           cache: 'npm'
           registry-url: https://registry.npmjs.org/
-      - run: npm ci
+
+      - name: Install dependencies
+        run: npm ci
         env:
           NPM_TOKEN: ${{ secrets.npm_token }}
-      - run: npm publish --access public
+
+      - name: Determine npm tag
+        id: npm-tag
+        run: |
+          if [[ ${{ github.ref_name }} == *"-alpha"* ]]; then
+            echo "tag=alpha" >> $GITHUB_OUTPUT
+          elif [[ ${{ github.ref_name }} == *"-rc"* ]]; then
+            echo "tag=rc" >> $GITHUB_OUTPUT
+          else
+            echo "tag=beta" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to NPM
+        run: npm publish --tag ${{ steps.npm-tag.outputs.tag }} --access public
         env:
           NODE_AUTH_TOKEN: ${{secrets.npm_token}}
