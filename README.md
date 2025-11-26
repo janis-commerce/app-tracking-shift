@@ -226,7 +226,7 @@ Main class for shift and work log operations.
 
 #### Properties
 
-**`hasStaffAuthorize`** (getter)
+**`hasStaffAuthorization`** (getter)
 
 - Returns: `boolean` - Staff authorization status
 
