@@ -3,7 +3,7 @@ import {
 	mockCrashlytics,
 	mockMMKV,
 	mockOfflineData,
-	mockDeleteStoredWorkLog,
+	mockStorageClass,
 } from '../__mocks__';
 
 jest.mock('@janiscommerce/app-request', () => ({
@@ -66,6 +66,7 @@ jest.mock('@janiscommerce/app-device-info', () => ({
 	getApplicationName: jest.fn(),
 	getDeviceScreenMeasurements: jest.fn(),
 	getNetworkState: jest.fn(),
+	getInternetReachability: jest.fn(),
 	getUniqueId: jest.fn(),
 }));
 
@@ -86,7 +87,9 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		finish: jest.fn(),
 		getShiftTrackedWorkLogs: jest.fn(),
 		getList: jest.fn(),
-		postPendingBatch: jest.fn(),
+		batch: jest.fn(),
+		createId: jest.fn(),
+		formatForJanis: jest.fn(),
 	},
 }));
 
@@ -106,7 +109,7 @@ jest.mock('../lib/Formatter', () => ({
 // Mock StorageService
 jest.mock('../lib/db/StorageService', () => ({
 	__esModule: true,
-	default: mockMMKV,
+	default: mockStorageClass,
 }));
 
 // Mock react-native-mmkv
@@ -118,26 +121,6 @@ jest.mock('react-native-mmkv', () => ({
 		const mockValue = mockMMKV.getString(key) || null;
 		const mockSetter = jest.fn();
 		return [mockValue, mockSetter];
-	}),
-}));
-
-// Mock useMMKVObject hook
-jest.mock('../lib/hooks/useMMKVObject', () => ({
-	__esModule: true,
-	useMMKVObject: jest.fn((key, defaultValue = null) => {
-		// Simula el comportamiento del hook personalizado
-		const rawValue = mockMMKV.getString(key);
-		let parsedValue = defaultValue;
-
-		if (rawValue) {
-			try {
-				parsedValue = JSON.parse(rawValue);
-			} catch (e) {
-				parsedValue = defaultValue;
-			}
-		}
-
-		return [parsedValue];
 	}),
 }));
 
@@ -168,10 +151,11 @@ jest.mock('../lib/OfflineData', () => ({
 // Mock utils/storage
 jest.mock('../lib/utils/storage', () => ({
 	__esModule: true,
-	getShiftData: jest.fn(),
 	getWorkLogTypesData: jest.fn(),
 	getStaffAuthorizationData: jest.fn(() => ({hasStaffAuthorization: true})),
-	setObject: jest.fn(),
-	getObject: jest.fn(),
-	deleteStoredWorkLog: mockDeleteStoredWorkLog,
+}));
+
+jest.mock('@janiscommerce/app-storage', () => ({
+	__esModule: true,
+	default: mockStorageClass,
 }));
