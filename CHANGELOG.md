@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [1.5.0] 2025-02-11
+## [1.6.0] 2025-02-11
 
 ### Added
 
@@ -11,6 +11,12 @@
 ### Changed
 
 - `open()` method now accepts optional `warehouseId` parameter
+
+## [1.5.0] 2026-01-08
+
+### Removed
+
+- Peer dependency react-dom
 
 ## [1.4.0] 2025-12-02
 
