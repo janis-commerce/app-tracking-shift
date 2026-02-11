@@ -161,7 +161,7 @@ describe('ShiftTrackingProvider', () => {
 
 		await waitFor(() => {
 			expect(openShift).toHaveBeenCalledTimes(1);
-			expect(openShift).toHaveBeenCalledWith(null);
+			expect(openShift).toHaveBeenCalledWith({warehouseId: '', onOpenShiftError: null});
 			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -183,7 +183,7 @@ describe('ShiftTrackingProvider', () => {
 
 		await waitFor(() => {
 			expect(openShift).toHaveBeenCalledTimes(1);
-			expect(openShift).toHaveBeenCalledWith(onError);
+			expect(openShift).toHaveBeenCalledWith({warehouseId: '', onOpenShiftError: onError});
 			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
 			expect(downloadWorkLogTypes).toHaveBeenCalledWith(onError);
 		});
@@ -587,6 +587,92 @@ describe('ShiftTrackingProvider', () => {
 
 			// Verificar que el mock no fue llamado más veces
 			expect(getShiftWorkLogsFromJanis).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe('Warehouse Change Functionality', () => {
+		it('should call Shift.update when warehouseId changes and shift is open', async () => {
+			const Shift = require('../lib/Shift').default;
+			const initialWarehouseId = 'warehouse-1';
+			const newWarehouseId = 'warehouse-2';
+
+			jest.spyOn(Shift, 'update').mockResolvedValueOnce('shift-123');
+			Object.defineProperty(Shift, 'isOpen', {
+				get: jest.fn(() => true),
+				configurable: true,
+			});
+
+			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			openShift.mockResolvedValueOnce({
+				openShiftId: 'shift-123',
+				getWorkLogs: false,
+			});
+			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
+
+			const {rerender} = render(
+				<ShiftTrackingProvider additionalInfo={{warehouseId: initialWarehouseId}}>
+					<div>Test Child</div>
+				</ShiftTrackingProvider>
+			);
+
+			await waitFor(() => {
+				expect(openShift).toHaveBeenCalledWith({
+					warehouseId: initialWarehouseId,
+					onOpenShiftError: null,
+				});
+			});
+
+			// Cambiar el warehouseId
+			rerender(
+				<ShiftTrackingProvider additionalInfo={{warehouseId: newWarehouseId}}>
+					<div>Test Child</div>
+				</ShiftTrackingProvider>
+			);
+
+			await waitFor(() => {
+				expect(Shift.update).toHaveBeenCalledWith({warehouseId: newWarehouseId});
+			});
+		});
+
+		it('should not call Shift.update when warehouseId changes but shift is not open', async () => {
+			const Shift = require('../lib/Shift').default;
+			const initialWarehouseId = 'warehouse-1';
+			const newWarehouseId = 'warehouse-2';
+
+			jest.spyOn(Shift, 'update').mockResolvedValueOnce('shift-123');
+			Object.defineProperty(Shift, 'isOpen', {
+				get: jest.fn(() => false),
+				configurable: true,
+			});
+
+			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			openShift.mockResolvedValueOnce({
+				openShiftId: 'shift-123',
+				getWorkLogs: false,
+			});
+			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
+
+			const {rerender} = render(
+				<ShiftTrackingProvider additionalInfo={{warehouseId: initialWarehouseId}}>
+					<div>Test Child</div>
+				</ShiftTrackingProvider>
+			);
+
+			await waitFor(() => {
+				expect(openShift).toHaveBeenCalled();
+			});
+
+			// Cambiar el warehouseId
+			rerender(
+				<ShiftTrackingProvider additionalInfo={{warehouseId: newWarehouseId}}>
+					<div>Test Child</div>
+				</ShiftTrackingProvider>
+			);
+
+			// Esperar un poco para asegurarnos que no se llamó
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			expect(Shift.update).not.toHaveBeenCalled();
 		});
 	});
 });
