@@ -72,6 +72,7 @@ jest.mock('@janiscommerce/app-device-info', () => ({
 
 jest.mock('../lib/StaffApiServices', () => ({
 	openShift: jest.fn(),
+	updateShift: jest.fn(),
 	closeShift: jest.fn(),
 	getShiftsList: jest.fn(),
 	getWorkLogTypes: jest.fn(),
