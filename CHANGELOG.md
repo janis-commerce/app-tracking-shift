@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [1.6.0] 2025-02-11
+
+### Added
+
+- `update()` method in Shift class to update shift warehouse without reopening
+
+### Changed
+
+- `open()` method now accepts optional `warehouseId` parameter
+
+## [1.5.0] 2026-01-08
+
+### Removed
+
+- Peer dependency react-dom
+
 ## [1.4.0] 2025-12-02
 
 ### Added

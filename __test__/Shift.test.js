@@ -163,6 +163,72 @@ describe('Shift', () => {
 		});
 	});
 
+	describe('update', () => {
+		it('should throw error when user does not have staff authorization', async () => {
+			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+
+			await expect(Shift.update({warehouseId: 'warehouse-123'})).rejects.toThrow(
+				'Staff MS authorization is required'
+			);
+			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
+		it('should return null when shift is closed', async () => {
+			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(true);
+
+			const result = await Shift.update({warehouseId: 'warehouse-123'});
+
+			expect(result).toBe(null);
+		});
+
+		it('should return shift id when warehouseId has not changed', async () => {
+			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
+			Storage.get.mockReturnValueOnce('shift-456');
+
+			const result = await Shift.update({warehouseId: 'warehouse-123'});
+
+			expect(result).toBe('shift-456');
+			expect(StaffService.updateShift).not.toHaveBeenCalled();
+		});
+
+		it('should update shift successfully with new warehouseId', async () => {
+			const mockShiftId = 'shift-789';
+			const newWarehouseId = 'warehouse-456';
+
+			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
+			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
+
+			StaffService.updateShift.mockResolvedValueOnce({
+				result: {id: mockShiftId},
+			});
+
+			const result = await Shift.update({warehouseId: newWarehouseId});
+
+			expect(mockCrashlytics.log).toHaveBeenCalledWith('[updateShift]:');
+			expect(StaffService.updateShift).toHaveBeenCalledWith({warehouseId: newWarehouseId});
+			expect(Storage.set).toHaveBeenCalledWith(
+				SHIFT_DATA,
+				expect.objectContaining({warehouseId: newWarehouseId})
+			);
+			expect(result).toBe(mockShiftId);
+		});
+
+		it('should handle staff service errors', async () => {
+			const error = new Error('Update failed');
+
+			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
+			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
+			StaffService.updateShift.mockRejectedValueOnce(error);
+
+			await expect(Shift.update({warehouseId: 'warehouse-456'})).rejects.toThrow('Update failed');
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+	});
+
 	describe('finish', () => {
 		it('should throw error when user does not have staff authorization', async () => {
 			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
@@ -249,7 +315,8 @@ describe('Shift', () => {
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
 			});
-			Storage.get.mockReturnValueOnce(mockShiftData);
+			Storage.get.mockReturnValue(mockShiftData);
+			StaffService.openShift.mockResolvedValueOnce({result: {id: mockShiftId}});
 
 			const result = await Shift.finish();
 
@@ -1070,6 +1137,26 @@ describe('Shift', () => {
 		});
 	});
 
+	describe('isOpen', () => {
+		it('should return true when shift status is opened', () => {
+			Storage.get.mockReturnValueOnce('opened');
+
+			const result = Shift.isOpen;
+
+			expect(Storage.get).toHaveBeenCalledWith(SHIFT_STATUS);
+			expect(result).toBe(true);
+		});
+
+		it('should return false when shift status is not opened', () => {
+			Storage.get.mockReturnValueOnce('closed');
+
+			const result = Shift.isOpen;
+
+			expect(Storage.get).toHaveBeenCalledWith(SHIFT_STATUS);
+			expect(result).toBe(false);
+		});
+	});
+
 	describe('isClosed', () => {
 		it('should return false when dateToClose is not exceeded', () => {
 			const storageData = {
@@ -1212,11 +1299,12 @@ describe('Shift', () => {
 		});
 
 		const storageData = {
+			dateToClose: '2024-01-15T17:00:00.000Z',
 			dateMaxToClose: '2024-01-15T20:00:00.000Z', // Fecha futura (9.5 horas después del mockDate)
 		};
 		it('should reopen shift successfully and extend closing date', async () => {
 			jest.spyOn(Shift, 'isExpired').mockReturnValueOnce(false);
-			Storage.get.mockReturnValueOnce({...storageData, reopeningExtensionTime: 1});
+			Storage.get.mockReturnValue({...storageData, reopeningExtensionTime: 1});
 			StaffService.openShift.mockResolvedValueOnce({});
 
 			const result = await Shift.reOpen();
