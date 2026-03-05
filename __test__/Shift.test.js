@@ -814,6 +814,63 @@ describe('Shift', () => {
 				startDate: mockDate.toISOString(),
 			});
 		});
+
+		describe('startDate option', () => {
+			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
+
+			beforeEach(() => {
+				Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
+				ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
+				spyIsInternetReachable.mockResolvedValueOnce(false);
+			});
+
+			it('should use startDate when a valid ISO string is provided', async () => {
+				const isoStartDate = '2026-01-10T08:00:00.000Z';
+
+				await Shift.openWorkLog(mockParams, {startDate: isoStartDate});
+
+				expect(OfflineData.save).toHaveBeenCalledWith(
+					mockFormattedId,
+					expect.objectContaining({startDate: isoStartDate})
+				);
+			});
+
+			it('should use startDate when a valid milliseconds number is provided', async () => {
+				const msStartDate = 1736496000000;
+				const expectedISO = new Date(msStartDate).toISOString();
+
+				await Shift.openWorkLog(mockParams, {startDate: msStartDate});
+
+				expect(OfflineData.save).toHaveBeenCalledWith(
+					mockFormattedId,
+					expect.objectContaining({startDate: expectedISO})
+				);
+			});
+
+			it('should fall back to current date when startDate is invalid', async () => {
+				await Shift.openWorkLog(mockParams, {startDate: 'not-a-date'});
+
+				expect(OfflineData.save).toHaveBeenCalledWith(
+					mockFormattedId,
+					expect.objectContaining({startDate: mockDate.toISOString()})
+				);
+			});
+
+			it('should fall back to current date when startDate is omitted', async () => {
+				await Shift.openWorkLog(mockParams);
+
+				expect(OfflineData.save).toHaveBeenCalledWith(
+					mockFormattedId,
+					expect.objectContaining({startDate: mockDate.toISOString()})
+				);
+			});
+		});
 	});
 
 	describe('finishWorkLog', () => {

@@ -43,3 +43,8 @@ pids
 *.realm.lock
 *.realm.management
 *.realm.note 
+
+# IA configs
+
+.cursor/
+.claude/

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.7.0-beta.1] 2026-05-03
+
+### Added
+
+- support for open worklog custom start date
+
 ## [1.6.0] 2025-02-11
 
 ### Added
