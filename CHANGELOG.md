@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.7.0-beta.2] 2026-06-03
+
+### Changed
+
+- openWorklog and finishWorkLog date parameters
+
 ## [1.7.0-beta.1] 2026-05-03
 
 ### Added

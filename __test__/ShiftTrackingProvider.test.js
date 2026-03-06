@@ -6,10 +6,10 @@ import {
 	downloadWorkLogTypes,
 	isAuthorizedToUseStaffMS,
 	getShiftWorkLogsFromJanis,
-} from '../lib/utils/provider';
+} from '../lib/helpers/provider';
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
-import * as Helpers from '../lib/utils/helpers';
+import * as Helpers from '../lib/helpers';
 
 describe('ShiftTrackingProvider', () => {
 	beforeEach(() => {

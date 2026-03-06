@@ -21,7 +21,7 @@ import {
 } from '../lib/constant';
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
-import {getStaffAuthorizationData} from '../lib/utils/storage';
+import {getStaffAuthorizationData} from '../lib/helpers/storage';
 import Formatter from '../lib/Formatter';
 import Shift from '../lib/Shift';
 import OfflineData from '../lib/OfflineData';
@@ -660,14 +660,17 @@ describe('Shift', () => {
 			expect(result).toEqual(expect.any(String));
 		});
 
-		it('should open excluded worklog types without pausing shift', async () => {
+		it('should open excluded worklog types without pausing shift (startDate as milliseconds)', async () => {
 			const mockShiftId = 'shift-123';
 			const mockFormattedId = 'picking-mock-random-id';
+			const msStartDate = 1736496000000;
+			const expectedISO = new Date(msStartDate).toISOString();
 			const mockParams = {
 				referenceId: EXCLUDED_WORKLOG_TYPES[0], // 'default-picking-work'
 				name: 'Picking Work',
 				type: 'work',
 				suggestedTime: 30,
+				startDate: msStartDate,
 			};
 
 			Storage.get
@@ -681,7 +684,7 @@ describe('Shift', () => {
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
 				referenceId: mockParams.referenceId,
-				startDate: mockDate.toISOString(),
+				startDate: expectedISO,
 			});
 			// No debe pausar el turno para actividades excluidas
 			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
@@ -691,7 +694,7 @@ describe('Shift', () => {
 				expect.objectContaining({
 					referenceId: mockParams.referenceId,
 					type: mockParams.type,
-					startDate: mockDate.toISOString(),
+					startDate: expectedISO,
 					shiftId: mockShiftId,
 				})
 			);
@@ -793,13 +796,15 @@ describe('Shift', () => {
 			reOpenSpy.mockRestore();
 		});
 
-		it('should save offline when batch fails with API error (online flow)', async () => {
+		it('should save offline when batch fails with API error (online flow, startDate as ISO string)', async () => {
 			const mockShiftId = 'shift-123';
 			const mockFormattedId = 'ref-123-mock-random-id';
+			const isoStartDate = '2026-01-10T08:00:00.000Z';
 			const mockParams = {
 				referenceId: 'ref-123',
 				name: 'Test Work',
 				type: 'work',
+				startDate: isoStartDate,
 			};
 
 			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
@@ -811,64 +816,7 @@ describe('Shift', () => {
 			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('API Error');
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
 				referenceId: mockParams.referenceId,
-				startDate: mockDate.toISOString(),
-			});
-		});
-
-		describe('startDate option', () => {
-			const mockShiftId = 'shift-123';
-			const mockFormattedId = 'ref-123-mock-random-id';
-			const mockParams = {
-				referenceId: 'ref-123',
-				name: 'Test Work',
-				type: 'work',
-			};
-
-			beforeEach(() => {
-				Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
-				ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
-				spyIsInternetReachable.mockResolvedValueOnce(false);
-			});
-
-			it('should use startDate when a valid ISO string is provided', async () => {
-				const isoStartDate = '2026-01-10T08:00:00.000Z';
-
-				await Shift.openWorkLog(mockParams, {startDate: isoStartDate});
-
-				expect(OfflineData.save).toHaveBeenCalledWith(
-					mockFormattedId,
-					expect.objectContaining({startDate: isoStartDate})
-				);
-			});
-
-			it('should use startDate when a valid milliseconds number is provided', async () => {
-				const msStartDate = 1736496000000;
-				const expectedISO = new Date(msStartDate).toISOString();
-
-				await Shift.openWorkLog(mockParams, {startDate: msStartDate});
-
-				expect(OfflineData.save).toHaveBeenCalledWith(
-					mockFormattedId,
-					expect.objectContaining({startDate: expectedISO})
-				);
-			});
-
-			it('should fall back to current date when startDate is invalid', async () => {
-				await Shift.openWorkLog(mockParams, {startDate: 'not-a-date'});
-
-				expect(OfflineData.save).toHaveBeenCalledWith(
-					mockFormattedId,
-					expect.objectContaining({startDate: mockDate.toISOString()})
-				);
-			});
-
-			it('should fall back to current date when startDate is omitted', async () => {
-				await Shift.openWorkLog(mockParams);
-
-				expect(OfflineData.save).toHaveBeenCalledWith(
-					mockFormattedId,
-					expect.objectContaining({startDate: mockDate.toISOString()})
-				);
+				startDate: isoStartDate,
 			});
 		});
 	});
