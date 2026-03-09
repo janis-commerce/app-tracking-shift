@@ -91,6 +91,7 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		batch: jest.fn(),
 		createId: jest.fn(),
 		formatForJanis: jest.fn(),
+		isValidWorkLog: jest.fn(),
 	},
 }));
 

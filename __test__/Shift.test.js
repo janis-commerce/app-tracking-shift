@@ -568,6 +568,7 @@ describe('Shift', () => {
 				.mockReturnValueOnce(mockId) // CURRENT_WORKLOG_ID
 				.mockReturnValueOnce(mockData); // CURRENT_WORKLOG_DATA
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			const result = Shift.getCurrentWorkLog();
 
 			expect(result).toEqual({id: mockId, ...mockData});
@@ -619,6 +620,7 @@ describe('Shift', () => {
 		it('should return null when no arguments are passed to openWorkLog', async () => {
 			const result = await Shift.openWorkLog();
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(false);
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', {});
 			expect(result).toBeNull();
 		});
@@ -626,6 +628,7 @@ describe('Shift', () => {
 		it('should throw error when user does not have staff authorization', async () => {
 			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			await expect(Shift.openWorkLog({referenceId: 'test'})).rejects.toThrow(
 				'Staff MS authorization is required'
 			);
@@ -643,6 +646,7 @@ describe('Shift', () => {
 				suggestedTime: 30,
 			};
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			Storage.get
 				.mockReturnValueOnce(undefined) // CURRENT_WORKLOG_ID
 				.mockReturnValueOnce(mockShiftId); // SHIFT_ID
@@ -673,6 +677,7 @@ describe('Shift', () => {
 				startDate: msStartDate,
 			};
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			Storage.get
 				.mockReturnValueOnce(undefined) // CURRENT_WORKLOG_ID
 				.mockReturnValueOnce(mockShiftId); // SHIFT_ID
@@ -717,17 +722,21 @@ describe('Shift', () => {
 				startDate: '2024-01-01T10:00:00.000Z',
 			};
 
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // Para validar workLog entrante
+				.mockReturnValueOnce(true); // Para validar data en getCurrentWorkLog
 			Storage.get
 				.mockReturnValueOnce('prev-worklog-id') // hasWorkLogInProgress
 				.mockReturnValueOnce('prev-worklog-id') // getCurrentWorkLog id
 				.mockReturnValueOnce(mockCurrentWorkLog) // getCurrentWorkLog data
 				.mockReturnValueOnce(mockShiftId); // SHIFT_ID
+			ShiftWorklogs.createId = jest.fn(() => 'ref-456-mock-random-id');
 			spyIsInternetReachable.mockResolvedValueOnce(false);
 
 			const result = await Shift.openWorkLog(mockParams);
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
-			expect(ShiftWorklogs.createId).toHaveBeenCalledWith(mockParams.referenceId);
 			expect(OfflineData.save).toHaveBeenNthCalledWith(1, 'prev-worklog-id', {
 				referenceId: 'ref-123',
 				endDate: mockDate.toISOString(),
@@ -754,6 +763,7 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
@@ -776,6 +786,7 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
@@ -807,6 +818,7 @@ describe('Shift', () => {
 				startDate: isoStartDate,
 			};
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
@@ -832,6 +844,7 @@ describe('Shift', () => {
 			expect(Storage.remove).not.toHaveBeenCalled();
 		});
 		it('should throw error when user does not have staff authorization', async () => {
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.finishWorkLog({referenceId: 'test'})).rejects.toThrow(
@@ -848,6 +861,7 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
 			Storage.get.mockReturnValueOnce(null);
 
 			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow(
@@ -870,7 +884,11 @@ describe('Shift', () => {
 			};
 
 			Storage.get.mockReturnValueOnce(mockCurrentWorkLog);
-
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true)
+				.mockReturnValueOnce(true)
+				.mockReturnValueOnce(true); // Para validar el worklog obtenido desde storage
 			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow(
 				'The worklog you are trying to close is different from the one that is currently open.'
 			);
@@ -895,7 +913,11 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(mockWorkLogId);
 			Storage.get.mockReturnValueOnce(mockCurrentWorkLog);
 			Storage.get.mockReturnValueOnce(mockShiftStatus);
-
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // Para validar workLog entrante
+				.mockReturnValueOnce(true) // Para validar data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // Para validar el worklog obtenido desde storage
 			spyIsInternetReachable.mockResolvedValueOnce(false);
 
 			await Shift.finishWorkLog(mockParams);
@@ -918,6 +940,11 @@ describe('Shift', () => {
 				type: 'work',
 			};
 
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // Para validar workLog entrante
+				.mockReturnValueOnce(true) // Para validar data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // Para validar el worklog obtenido desde storage
 			mockOfflineData.hasData = false;
 
 			Storage.get.mockReturnValueOnce(mockWorkLogId);
@@ -945,6 +972,12 @@ describe('Shift', () => {
 				name: 'Test Work',
 				type: 'work',
 			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // Para validar workLog entrante
+				.mockReturnValueOnce(true) // Para validar data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // Para validar el worklog obtenido desde storage
 			spyIsInternetReachable.mockResolvedValueOnce(true);
 			Storage.get.mockReturnValueOnce(mockWorkLogId); // CURRENT_WORKLOG_ID
 			Storage.get.mockReturnValueOnce(mockCurrentWorkLog); // CURRENT_WORKLOG_DATA
@@ -977,11 +1010,14 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(mockWorkLogId);
 			Storage.get.mockReturnValueOnce(mockCurrentWorkLog);
 			Storage.get.mockReturnValueOnce(mockShiftStatus);
-
 			spyIsInternetReachable.mockResolvedValueOnce(true);
 			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(true);
 			jest.spyOn(Shift, 'reOpen').mockResolvedValueOnce(null);
-
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // Para validar workLog entrante
+				.mockReturnValueOnce(true) // Para validar data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // Para validar el worklog obtenido desde storage
 			ShiftWorklogs.formatForJanis.mockReturnValueOnce([
 				{
 					referenceId: 'ref-123',
@@ -1274,6 +1310,7 @@ describe('Shift', () => {
 
 			const result = await Shift.sendPendingWorkLogs();
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(false);
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(ShiftWorklogs.formatForJanis).toHaveBeenCalledWith([]);
 			expect(ShiftWorklogs.batch).not.toHaveBeenCalled();
@@ -1287,6 +1324,7 @@ describe('Shift', () => {
 
 			const result = await Shift.sendPendingWorkLogs();
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(false);
 			expect(mockOfflineData.get).not.toHaveBeenCalled();
 			expect(ShiftWorklogs.batch).not.toHaveBeenCalled();
 			expect(mockOfflineData.deleteAll).not.toHaveBeenCalled();

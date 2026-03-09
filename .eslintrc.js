@@ -29,6 +29,12 @@ module.exports = {
 			},
 		],
 		'import/prefer-default-export': 'off',
+		'import/no-extraneous-dependencies': [
+			'error',
+			{
+				devDependencies: true,
+			},
+		],
 		'react/no-array-index-key': 'off',
 		'react/state-in-constructor': 'off',
 		'react/static-property-placement': 'off',

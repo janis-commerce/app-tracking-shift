@@ -10,6 +10,7 @@ import {
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 import * as Helpers from '../lib/helpers';
+import ShiftWorklogs from '../lib/ShiftWorklogs';
 
 describe('ShiftTrackingProvider', () => {
 	beforeEach(() => {
@@ -481,6 +482,7 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(true);
 			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
@@ -562,6 +564,10 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(false)
+				.mockReturnValueOnce(false);
 			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',

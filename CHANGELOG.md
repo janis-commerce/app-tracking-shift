@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [1.7.0-beta.3] 2026-09-03
+
+### Added
+
+- @janiscommerce/apps-helpers as devDependency
+
+### Changed
+
+- local helpers functions were replaced by apps-helpers utils
+
 ## [1.7.0-beta.2] 2026-06-03
 
 ### Changed
