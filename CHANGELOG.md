@@ -2,13 +2,13 @@
 
 ## [Unreleased]
 
-## [1.7.0-beta.4] 2026-09-03
+## [1.7.0-beta.4] 2026-03-09
 
 ### Added
 
 - @janiscommerce/apps-helpers as peerDependency
 
-## [1.7.0-beta.3] 2026-09-03
+## [1.7.0-beta.3] 2026-03-09
 
 ### Added
 
@@ -18,13 +18,13 @@
 
 - local helpers functions were replaced by apps-helpers utils
 
-## [1.7.0-beta.2] 2026-06-03
+## [1.7.0-beta.2] 2026-03-06
 
 ### Changed
 
 - openWorklog and finishWorkLog date parameters
 
-## [1.7.0-beta.1] 2026-05-03
+## [1.7.0-beta.1] 2026-03-05
 
 ### Added
 
