@@ -49,6 +49,7 @@
 		"@janiscommerce/app-device-info": "^1.1.0",
 		"@janiscommerce/app-request": ">=2.0.0",
 		"@janiscommerce/app-storage": ">=1.1.0",
+		"@janiscommerce/apps-helpers": ">=2.0.0",
 		"react": ">=17.0.2 <19",
 		"react-native": ">=0.67.5 <0.75"
 	},

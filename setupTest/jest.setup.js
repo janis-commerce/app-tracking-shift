@@ -131,8 +131,6 @@ jest.mock('../lib/helpers', () => {
 	return {
 		__esModule: true,
 		...actualHelpers,
-		generateRandomId: jest.fn(() => 'mock-random-id'),
-		promiseWrapper: jest.fn(),
 	};
 });
 

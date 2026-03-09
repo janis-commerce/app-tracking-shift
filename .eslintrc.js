@@ -32,7 +32,14 @@ module.exports = {
 		'import/no-extraneous-dependencies': [
 			'error',
 			{
-				devDependencies: true,
+				devDependencies: [
+					'**/__test__/**',
+					'**/__mocks__/**',
+					'**/setupTest/**',
+					'*.config.js',
+					'*.setup.js',
+				],
+				peerDependencies: true,
 			},
 		],
 		'react/no-array-index-key': 'off',

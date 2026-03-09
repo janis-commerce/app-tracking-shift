@@ -9,7 +9,6 @@ import {
 } from '../lib/helpers/provider';
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
-import * as Helpers from '../lib/helpers';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
 
 describe('ShiftTrackingProvider', () => {
@@ -33,14 +32,6 @@ describe('ShiftTrackingProvider', () => {
 				'staff.authorization': JSON.stringify({hasStaffAuthorization: true}),
 			};
 			return mockData[key] || null;
-		});
-
-		// Configurar promiseWrapper para retornar éxito por defecto
-		jest.spyOn(Helpers, 'promiseWrapper').mockImplementation((promise) => {
-			if (!promise || typeof promise.then !== 'function') {
-				return Promise.resolve([undefined, null]);
-			}
-			return promise.then((data) => [data, null]).catch((error) => Promise.resolve([null, error]));
 		});
 
 		// Configurar mocks por defecto
