@@ -832,10 +832,94 @@ describe('Shift', () => {
 				startDate: isoStartDate,
 			});
 		});
+
+		it('should throw when new activity start date is earlier than previous activity start date', async () => {
+			const previousStartDate = '2024-01-01T12:00:00.000Z';
+			const newStartDate = '2024-01-01T10:00:00.000Z';
+			const mockParams = {
+				referenceId: 'ref-456',
+				name: 'New Work',
+				type: 'work',
+				suggestedTime: 30,
+				startDate: newStartDate,
+			};
+			const mockCurrentWorkLog = {
+				id: 'prev-worklog-id',
+				referenceId: 'ref-123',
+				name: 'Previous Work',
+				type: 'work',
+				startDate: previousStartDate,
+			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // workLog entrante
+				.mockReturnValueOnce(true); // data en getCurrentWorkLog
+			Storage.get
+				.mockReturnValueOnce('prev-worklog-id') // hasWorkLogInProgress
+				.mockReturnValueOnce('prev-worklog-id') // getCurrentWorkLog id
+				.mockReturnValueOnce(mockCurrentWorkLog); // getCurrentWorkLog data
+
+			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow(
+				"The new activity's start date is earlier than previous activity start date."
+			);
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
+		it('should use current date when startDate is omitted or invalid', async () => {
+			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				suggestedTime: 30,
+			};
+
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
+			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
+			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
+			spyIsInternetReachable.mockResolvedValueOnce(false);
+
+			const result = await Shift.openWorkLog(mockParams);
+
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.objectContaining({
+					referenceId: mockParams.referenceId,
+					startDate: mockDate.toISOString(),
+				})
+			);
+			expect(result).toEqual(mockFormattedId);
+		});
+
+		it('should strip endDate from workLog when opening', async () => {
+			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: '2024-01-15T09:00:00.000Z',
+				endDate: '2024-01-15T10:00:00.000Z',
+			};
+
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
+			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
+			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
+			spyIsInternetReachable.mockResolvedValueOnce(false);
+
+			await Shift.openWorkLog(mockParams);
+
+			expect(Storage.set).toHaveBeenCalledWith(
+				CURRENT_WORKLOG_DATA,
+				expect.not.objectContaining({endDate: expect.anything()})
+			);
+		});
 	});
 
 	describe('finishWorkLog', () => {
-		it('should return null when no arguments are passed to finishWorkLog', async () => {
+		it('should throw error when no arguments are passed to finishWorkLog', async () => {
 			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(false);
 
 			await expect(Shift.finishWorkLog()).rejects.toThrow(
@@ -908,6 +992,7 @@ describe('Shift', () => {
 				referenceId: 'ref-123',
 				name: 'Test Work',
 				type: 'work',
+				startDate: '2024-01-15T09:00:00.000Z',
 			};
 
 			Storage.get.mockReturnValueOnce(mockWorkLogId);
@@ -938,6 +1023,7 @@ describe('Shift', () => {
 				referenceId: 'ref-123',
 				name: 'Test Work',
 				type: 'work',
+				startDate: '2024-01-15T09:00:00.000Z',
 			};
 
 			jest
@@ -971,6 +1057,7 @@ describe('Shift', () => {
 				referenceId: 'ref-123',
 				name: 'Test Work',
 				type: 'work',
+				startDate: '2024-01-15T09:00:00.000Z',
 			};
 
 			jest
@@ -1033,6 +1120,149 @@ describe('Shift', () => {
 				endDate: mockDate.toISOString(),
 			});
 			expect(Storage.remove).toHaveBeenCalled();
+		});
+
+		it('should throw when end date is earlier than activity start date', async () => {
+			const mockWorkLogId = 'worklog-456';
+			const activityStartDate = '2024-01-15T12:00:00.000Z';
+			const endDateEarlier = '2024-01-15T10:00:00.000Z';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				endDate: endDateEarlier,
+			};
+			const mockCurrentWorkLog = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: activityStartDate,
+			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // workLog entrante
+				.mockReturnValueOnce(true) // data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // currentWorkLog retornado
+			Storage.get
+				.mockReturnValueOnce(mockWorkLogId) // getCurrentWorkLog id
+				.mockReturnValueOnce(mockCurrentWorkLog); // getCurrentWorkLog data
+
+			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow(
+				"The activity's end date is earlier than its start date."
+			);
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+
+		it('should accept endDate as ISO string and use it when finishing', async () => {
+			const mockWorkLogId = 'worklog-456';
+			const isoEndDate = '2024-01-15T14:00:00.000Z';
+			const mockParams = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				endDate: isoEndDate,
+			};
+			const mockCurrentWorkLog = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: '2024-01-15T10:00:00.000Z',
+			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // workLog entrante
+				.mockReturnValueOnce(true) // data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // currentWorkLog retornado
+			Storage.get
+				.mockReturnValueOnce(mockWorkLogId) // getCurrentWorkLog id
+				.mockReturnValueOnce(mockCurrentWorkLog); // getCurrentWorkLog data
+			spyIsInternetReachable.mockResolvedValueOnce(false);
+
+			const result = await Shift.finishWorkLog(mockParams);
+
+			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
+				referenceId: mockParams.referenceId,
+				endDate: isoEndDate,
+			});
+			expect(result).toEqual(mockWorkLogId);
+		});
+
+		it('should accept endDate as milliseconds and convert to ISO when finishing', async () => {
+			const mockWorkLogId = 'worklog-456';
+			const msEndDate = 1705312800000; // 2024-01-15T14:00:00.000Z
+			const expectedISO = new Date(msEndDate).toISOString();
+			const mockParams = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				endDate: msEndDate,
+			};
+			const mockCurrentWorkLog = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: '2024-01-15T10:00:00.000Z',
+			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // workLog entrante
+				.mockReturnValueOnce(true) // data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // currentWorkLog retornado
+			Storage.get
+				.mockReturnValueOnce(mockWorkLogId) // getCurrentWorkLog id
+				.mockReturnValueOnce(mockCurrentWorkLog); // getCurrentWorkLog data
+			spyIsInternetReachable.mockResolvedValueOnce(false);
+
+			const result = await Shift.finishWorkLog(mockParams);
+
+			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
+				referenceId: mockParams.referenceId,
+				endDate: expectedISO,
+			});
+			expect(result).toEqual(mockWorkLogId);
+		});
+
+		it('should use current date when endDate is omitted or invalid', async () => {
+			const mockWorkLogId = 'worklog-456';
+			const mockParams = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
+			const mockCurrentWorkLog = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: '2024-01-15T10:00:00.000Z',
+			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true) // workLog entrante
+				.mockReturnValueOnce(true) // data en getCurrentWorkLog
+				.mockReturnValueOnce(true); // currentWorkLog retornado
+			Storage.get
+				.mockReturnValueOnce(mockWorkLogId) // getCurrentWorkLog id
+				.mockReturnValueOnce(mockCurrentWorkLog); // getCurrentWorkLog data
+			spyIsInternetReachable.mockResolvedValueOnce(false);
+
+			const result = await Shift.finishWorkLog(mockParams);
+
+			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
+				referenceId: mockParams.referenceId,
+				endDate: mockDate.toISOString(),
+			});
+			expect(result).toEqual(mockWorkLogId);
 		});
 	});
 
