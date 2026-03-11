@@ -1307,10 +1307,10 @@ describe('Shift', () => {
 			mockOfflineData.hasData = true;
 			mockOfflineData.get.mockReturnValueOnce([]);
 			ShiftWorklogs.formatForJanis = jest.fn(() => []);
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(false);
 
 			const result = await Shift.sendPendingWorkLogs();
 
-			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(false);
 			expect(mockOfflineData.get).toHaveBeenCalled();
 			expect(ShiftWorklogs.formatForJanis).toHaveBeenCalledWith([]);
 			expect(ShiftWorklogs.batch).not.toHaveBeenCalled();
