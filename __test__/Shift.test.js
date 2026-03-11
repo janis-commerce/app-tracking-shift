@@ -618,11 +618,12 @@ describe('Shift', () => {
 
 	describe('openWorkLog', () => {
 		it('should return null when no arguments are passed to openWorkLog', async () => {
-			const result = await Shift.openWorkLog();
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(false);
 
-			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(false);
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', {});
-			expect(result).toBeNull();
+			await expect(Shift.openWorkLog()).rejects.toThrow(
+				'must provide a valid activity to open a work log'
+			);
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 
 		it('should throw error when user does not have staff authorization', async () => {
@@ -835,13 +836,12 @@ describe('Shift', () => {
 
 	describe('finishWorkLog', () => {
 		it('should return null when no arguments are passed to finishWorkLog', async () => {
-			const result = await Shift.finishWorkLog();
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(false);
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', {});
-			expect(result).toBeNull();
-			expect(ShiftWorklogs.finish).not.toHaveBeenCalled();
-			expect(Storage.set).not.toHaveBeenCalled();
-			expect(Storage.remove).not.toHaveBeenCalled();
+			await expect(Shift.finishWorkLog()).rejects.toThrow(
+				'must provide a valid activity to close a work log'
+			);
+			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 		it('should throw error when user does not have staff authorization', async () => {
 			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
