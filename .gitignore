@@ -43,3 +43,8 @@ pids
 *.realm.lock
 *.realm.management
 *.realm.note 
+
+# AI-tools
+/.cursor
+/.claude
+/.mcp.json

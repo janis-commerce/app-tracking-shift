@@ -21,7 +21,7 @@ import {
 } from '../lib/constant';
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
-import {getStaffAuthorizationData} from '../lib/utils/storage';
+import {getGlobalSettings} from '../lib/utils/storage';
 import Formatter from '../lib/Formatter';
 import Shift from '../lib/Shift';
 import OfflineData from '../lib/OfflineData';
@@ -62,8 +62,8 @@ describe('Shift', () => {
 
 	describe('open', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			// Mock getStaffAuthorizationData to return false for this test
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			// Mock getGlobalSettings to return false for this test
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.open()).rejects.toThrow('Staff MS authorization is required');
 			expect(mockCrashlytics.log).toHaveBeenCalled();
@@ -165,7 +165,7 @@ describe('Shift', () => {
 
 	describe('update', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.update({warehouseId: 'warehouse-123'})).rejects.toThrow(
 				'Staff MS authorization is required'
@@ -231,7 +231,7 @@ describe('Shift', () => {
 
 	describe('finish', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.finish()).rejects.toThrow('Staff MS authorization is required');
 			expect(mockCrashlytics.log).toHaveBeenCalled();
@@ -415,7 +415,7 @@ describe('Shift', () => {
 
 	describe('getUserOpenShift', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.getUserOpenShift()).rejects.toThrow('Staff MS authorization is required');
 			expect(mockCrashlytics.log).toHaveBeenCalled();
@@ -464,7 +464,7 @@ describe('Shift', () => {
 
 	describe('fetchWorklogTypes', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.fetchWorklogTypes()).rejects.toThrow('Staff MS authorization is required');
 			expect(mockCrashlytics.log).toHaveBeenCalled();
@@ -624,7 +624,7 @@ describe('Shift', () => {
 		});
 
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.openWorkLog({referenceId: 'test'})).rejects.toThrow(
 				'Staff MS authorization is required'
@@ -827,7 +827,7 @@ describe('Shift', () => {
 			expect(Storage.remove).not.toHaveBeenCalled();
 		});
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.finishWorkLog({referenceId: 'test'})).rejects.toThrow(
 				'Staff MS authorization is required'
@@ -995,81 +995,56 @@ describe('Shift', () => {
 		});
 	});
 
-	describe('checkStaffMSAuthorization', () => {
-		it('should return true when enabledShiftAndWorkLog is true', async () => {
+	describe('getGlobalStaffSettings', () => {
+		it('should return an object with client staff global configs', async () => {
 			StaffService.getSetting.mockResolvedValueOnce({
 				result: {
 					enabledShiftAndWorkLog: true,
+					inactivityTimeout: 1000,
 				},
 			});
 
-			const result = await Shift.checkStaffMSAuthorization();
+			const result = await Shift.getGlobalStaffSettings();
 
 			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
-			expect(result).toBe(true);
+			expect(result).toEqual({enabledShiftAndWorkLog: true, inactivityTimeout: 1000});
 		});
 
-		it('should return false when enabledShiftAndWorkLog is false', async () => {
-			StaffService.getSetting.mockResolvedValueOnce({
-				result: {
-					enabledShiftAndWorkLog: false,
-				},
-			});
-
-			const result = await Shift.checkStaffMSAuthorization();
-
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
-			expect(result).toBe(false);
-		});
-
-		it('should return false when enabledShiftAndWorkLog is undefined', async () => {
-			StaffService.getSetting.mockResolvedValueOnce({
-				result: {
-					otherSetting: true,
-				},
-			});
-
-			const result = await Shift.checkStaffMSAuthorization();
-
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
-			expect(result).toBe(false);
-		});
-
-		it('should return false when result is undefined', async () => {
+		it('should return an object with default values when result is undefined', async () => {
 			StaffService.getSetting.mockResolvedValueOnce({
 				result: undefined,
 			});
 
-			const result = await Shift.checkStaffMSAuthorization();
+			const result = await Shift.getGlobalStaffSettings();
 
 			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
-			expect(result).toBe(false);
+			expect(result).toEqual({enabledShiftAndWorkLog: false, inactivityTimeout: 0});
 		});
 
 		it('should return false when response has no result property', async () => {
 			StaffService.getSetting.mockResolvedValueOnce({});
 
-			const result = await Shift.checkStaffMSAuthorization();
+			const result = await Shift.getGlobalStaffSettings();
 
 			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
-			expect(result).toBe(false);
+			expect(result).toEqual({enabledShiftAndWorkLog: false, inactivityTimeout: 0});
 		});
 
 		it('should handle staff service errors', async () => {
 			const error = new Error('Setting check failed');
 			StaffService.getSetting.mockRejectedValueOnce(error);
 
-			await expect(Shift.checkStaffMSAuthorization()).rejects.toThrow('Setting check failed');
+			await expect(Shift.getGlobalStaffSettings()).rejects.toThrow('Setting check failed');
 			expect(mockCrashlytics.recordError).toHaveBeenCalledWith(
 				error,
-				'Error checking staff MS authorization'
+				'Error getting global staff settings'
 			);
 		});
 	});
 
 	describe('getWorkLogs', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.getWorkLogs('shift-123')).rejects.toThrow(
 				'Staff MS authorization is required'
@@ -1211,7 +1186,7 @@ describe('Shift', () => {
 
 	describe('sendPendingWorkLogs', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.sendPendingWorkLogs()).rejects.toThrow(
 				'Staff MS authorization is required'
@@ -1291,7 +1266,7 @@ describe('Shift', () => {
 
 	describe('reOpen', () => {
 		it('should throw error when user does not have staff authorization', async () => {
-			getStaffAuthorizationData.mockReturnValueOnce({hasStaffAuthorization: false});
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			await expect(Shift.reOpen()).rejects.toThrow('Staff MS authorization is required');
 			expect(mockCrashlytics.log).toHaveBeenCalled();

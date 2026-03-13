@@ -1,15 +1,17 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
-import {
-	openShift,
-	downloadWorkLogTypes,
-	isAuthorizedToUseStaffMS,
-	getShiftWorkLogsFromJanis,
-} from '../lib/utils/provider';
+import {openShift, downloadWorkLogTypes, getShiftWorkLogsFromJanis} from '../lib/utils/provider';
+import {syncGlobalSettings} from '../lib/provider/helpers';
+import {getGlobalSettings} from '../lib/utils/storage';
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 import * as Helpers from '../lib/utils/helpers';
+import Shift from '../lib/Shift';
+
+jest.mock('../lib/provider/helpers', () => ({
+	syncGlobalSettings: jest.fn(),
+}));
 
 describe('ShiftTrackingProvider', () => {
 	beforeEach(() => {
@@ -43,7 +45,6 @@ describe('ShiftTrackingProvider', () => {
 		});
 
 		// Configurar mocks por defecto
-		isAuthorizedToUseStaffMS.mockResolvedValue(true);
 		openShift.mockResolvedValue({
 			openShiftId: 'shift-123',
 			getWorkLogs: false,
@@ -57,7 +58,9 @@ describe('ShiftTrackingProvider', () => {
 
 	describe('Staff Authorization Validation', () => {
 		it('should not proceed with openShift and downloadWorkLogTypes when user is not authorized', async () => {
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(false);
+			syncGlobalSettings.mockResolvedValueOnce();
+
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
 
 			let contextValue;
 
@@ -74,7 +77,7 @@ describe('ShiftTrackingProvider', () => {
 
 			await waitFor(() => {
 				expect(getByTestId('unauthorized-test')).toBeDefined();
-				expect(isAuthorizedToUseStaffMS).toHaveBeenCalledTimes(1);
+				expect(syncGlobalSettings).toHaveBeenCalledTimes(1);
 				expect(openShift).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 				expect(contextValue.error).toBeNull();
@@ -83,7 +86,7 @@ describe('ShiftTrackingProvider', () => {
 
 		it('should set staffMSAuthorization error when authorization check fails', async () => {
 			const authError = new Error('Authorization failed');
-			isAuthorizedToUseStaffMS.mockRejectedValueOnce(authError);
+			syncGlobalSettings.mockRejectedValueOnce(authError);
 
 			let contextValue;
 
@@ -110,18 +113,18 @@ describe('ShiftTrackingProvider', () => {
 			await waitFor(() => {
 				expect(getByTestId('auth-error')).toBeDefined();
 				expect(getByTestId('auth-error-type')).toBeDefined();
-				expect(isAuthorizedToUseStaffMS).toHaveBeenCalledTimes(1);
+				expect(syncGlobalSettings).toHaveBeenCalledTimes(1);
 				expect(openShift).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 				expect(contextValue.error).toEqual({
 					message: authError.message,
-					type: 'staffMSAuthorization',
+					type: 'syncGlobalSettings',
 				});
 			});
 		});
 		it('should handle authorization error and not proceed with subsequent operations', async () => {
 			const authError = new Error('User not found in staff system');
-			isAuthorizedToUseStaffMS.mockRejectedValueOnce(authError);
+			syncGlobalSettings.mockRejectedValueOnce(authError);
 
 			let contextValue;
 
@@ -137,16 +140,17 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(isAuthorizedToUseStaffMS).toHaveBeenCalledTimes(1);
+				expect(syncGlobalSettings).toHaveBeenCalledTimes(1);
 				expect(openShift).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
-				expect(contextValue.error.type).toBe('staffMSAuthorization');
+				expect(contextValue.error.type).toBe('syncGlobalSettings');
 			});
 		});
 	});
 
 	it('should call openShift and downloadWorkLogTypes on mount', async () => {
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -168,7 +172,8 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should call openShift with error callback when provided', async () => {
 		const onError = jest.fn();
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -191,7 +196,8 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle openShift error and set error state', async () => {
 		const openShiftError = new Error('Failed to open shift');
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockRejectedValueOnce(openShiftError);
 
 		let contextValue;
@@ -222,7 +228,8 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle downloadWorkLogTypes error and set error state', async () => {
 		const downloadError = new Error('Failed to download worklog types');
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -256,7 +263,8 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should provide context values from storage', async () => {
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		let contextValue;
 
 		const TestComponent = () => {
@@ -298,7 +306,8 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should handle empty storage values gracefully', async () => {
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		// Configurar storage vacío para todas las llamadas
 		Storage.get.mockReturnValue(null);
 
@@ -326,7 +335,8 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should execute handleShiftTrackingInit successfully without errors', async () => {
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -355,7 +365,8 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should handle openShift error and not continue with downloadWorkLogTypes', async () => {
-		isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+		syncGlobalSettings.mockResolvedValueOnce();
+		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		const openShiftError = new Error('Open shift failed');
 		openShift.mockRejectedValueOnce(openShiftError);
 
@@ -385,7 +396,8 @@ describe('ShiftTrackingProvider', () => {
 
 	describe('WorkLogs History Functionality', () => {
 		it('should call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: true', async () => {
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -409,7 +421,8 @@ describe('ShiftTrackingProvider', () => {
 		});
 
 		it('should NOT call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: false', async () => {
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: false,
@@ -431,7 +444,8 @@ describe('ShiftTrackingProvider', () => {
 
 		it('should handle getShiftWorkLogsFromJanis error and set error state', async () => {
 			const workLogsError = new Error('Failed to fetch work logs');
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -481,7 +495,8 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -525,7 +540,8 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -562,7 +578,8 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -592,7 +609,6 @@ describe('ShiftTrackingProvider', () => {
 
 	describe('Warehouse Change Functionality', () => {
 		it('should call Shift.update when warehouseId changes and shift is open', async () => {
-			const Shift = require('../lib/Shift').default;
 			const initialWarehouseId = 'warehouse-1';
 			const newWarehouseId = 'warehouse-2';
 
@@ -602,7 +618,8 @@ describe('ShiftTrackingProvider', () => {
 				configurable: true,
 			});
 
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-123',
 				getWorkLogs: false,
@@ -635,7 +652,6 @@ describe('ShiftTrackingProvider', () => {
 		});
 
 		it('should not call Shift.update when warehouseId changes but shift is not open', async () => {
-			const Shift = require('../lib/Shift').default;
 			const initialWarehouseId = 'warehouse-1';
 			const newWarehouseId = 'warehouse-2';
 
@@ -645,7 +661,8 @@ describe('ShiftTrackingProvider', () => {
 				configurable: true,
 			});
 
-			isAuthorizedToUseStaffMS.mockResolvedValueOnce(true);
+			syncGlobalSettings.mockResolvedValueOnce();
+			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-123',
 				getWorkLogs: false,
