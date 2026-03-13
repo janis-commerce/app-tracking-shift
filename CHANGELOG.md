@@ -2,33 +2,23 @@
 
 ## [Unreleased]
 
-## [1.7.0-beta.4] 2026-03-09
+## [2.0.0] 2026-03-12
+
+### Breaking Changes
+
+- `openWorkLog()` now throws an error instead of returning `null` when receiving an invalid worklog
+- `finishWorkLog()` now throws an error instead of returning `null` when receiving an invalid worklog
 
 ### Added
 
 - @janiscommerce/apps-helpers as peerDependency
-
-## [1.7.0-beta.3] 2026-03-09
-
-### Added
-
 - @janiscommerce/apps-helpers as devDependency
+- support for open worklog custom start date
 
 ### Changed
 
 - local helpers functions were replaced by apps-helpers utils
-
-## [1.7.0-beta.2] 2026-03-06
-
-### Changed
-
 - openWorklog and finishWorkLog date parameters
-
-## [1.7.0-beta.1] 2026-03-05
-
-### Added
-
-- support for open worklog custom start date
 
 ## [1.6.0] 2025-02-11
 
