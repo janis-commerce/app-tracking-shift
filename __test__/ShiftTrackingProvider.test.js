@@ -1,19 +1,16 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
-import {openShift, downloadWorkLogTypes, getShiftWorkLogsFromJanis} from '../lib/utils/provider';
-import {syncGlobalSettings} from '../lib/provider/helpers';
-import {getGlobalSettings} from '../lib/utils/storage';
+import {openShift, downloadWorkLogTypes, getShiftWorkLogsFromJanis} from '../lib/helpers/provider';
+import {getGlobalSettings} from '../lib/helpers/storage';
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
-import * as Helpers from '../lib/utils/helpers';
+import ShiftWorklogs from '../lib/ShiftWorklogs';
 import Shift from '../lib/Shift';
 
-jest.mock('../lib/provider/helpers', () => ({
-	syncGlobalSettings: jest.fn(),
-}));
-
 describe('ShiftTrackingProvider', () => {
+	const checkStaffMSAuthorizationSpy = jest.spyOn(Shift, 'checkStaffMSAuthorization');
+
 	beforeEach(() => {
 		jest.clearAllMocks();
 		// Resetear los valores del mock storage
@@ -36,14 +33,6 @@ describe('ShiftTrackingProvider', () => {
 			return mockData[key] || null;
 		});
 
-		// Configurar promiseWrapper para retornar éxito por defecto
-		jest.spyOn(Helpers, 'promiseWrapper').mockImplementation((promise) => {
-			if (!promise || typeof promise.then !== 'function') {
-				return Promise.resolve([undefined, null]);
-			}
-			return promise.then((data) => [data, null]).catch((error) => Promise.resolve([null, error]));
-		});
-
 		// Configurar mocks por defecto
 		openShift.mockResolvedValue({
 			openShiftId: 'shift-123',
@@ -58,9 +47,10 @@ describe('ShiftTrackingProvider', () => {
 
 	describe('Staff Authorization Validation', () => {
 		it('should not proceed with openShift and downloadWorkLogTypes when user is not authorized', async () => {
-			syncGlobalSettings.mockResolvedValueOnce();
-
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: false});
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: false},
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(false);
 
 			let contextValue;
 
@@ -77,16 +67,20 @@ describe('ShiftTrackingProvider', () => {
 
 			await waitFor(() => {
 				expect(getByTestId('unauthorized-test')).toBeDefined();
-				expect(syncGlobalSettings).toHaveBeenCalledTimes(1);
+				expect(checkStaffMSAuthorizationSpy).toHaveBeenCalledTimes(1);
 				expect(openShift).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 				expect(contextValue.error).toBeNull();
 			});
 		});
-
 		it('should set staffMSAuthorization error when authorization check fails', async () => {
 			const authError = new Error('Authorization failed');
-			syncGlobalSettings.mockRejectedValueOnce(authError);
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: false},
+				isExpired: true,
+				expirationTime: 0,
+			});
+			checkStaffMSAuthorizationSpy.mockRejectedValueOnce(authError);
 
 			let contextValue;
 
@@ -113,18 +107,23 @@ describe('ShiftTrackingProvider', () => {
 			await waitFor(() => {
 				expect(getByTestId('auth-error')).toBeDefined();
 				expect(getByTestId('auth-error-type')).toBeDefined();
-				expect(syncGlobalSettings).toHaveBeenCalledTimes(1);
+				expect(checkStaffMSAuthorizationSpy).toHaveBeenCalledTimes(1);
 				expect(openShift).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 				expect(contextValue.error).toEqual({
 					message: authError.message,
-					type: 'syncGlobalSettings',
+					type: 'staffMSAuthorization',
 				});
 			});
 		});
 		it('should handle authorization error and not proceed with subsequent operations', async () => {
 			const authError = new Error('User not found in staff system');
-			syncGlobalSettings.mockRejectedValueOnce(authError);
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: false},
+				isExpired: true,
+				expirationTime: 0,
+			});
+			checkStaffMSAuthorizationSpy.mockRejectedValueOnce(authError);
 
 			let contextValue;
 
@@ -140,16 +139,21 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(syncGlobalSettings).toHaveBeenCalledTimes(1);
+				expect(checkStaffMSAuthorizationSpy).toHaveBeenCalledTimes(1);
 				expect(openShift).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
-				expect(contextValue.error.type).toBe('syncGlobalSettings');
+				expect(contextValue.error.type).toBe('staffMSAuthorization');
 			});
 		});
 	});
 
 	it('should call openShift and downloadWorkLogTypes on mount', async () => {
-		syncGlobalSettings.mockResolvedValueOnce();
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
@@ -172,7 +176,12 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should call openShift with error callback when provided', async () => {
 		const onError = jest.fn();
-		syncGlobalSettings.mockResolvedValueOnce();
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
@@ -196,7 +205,12 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle openShift error and set error state', async () => {
 		const openShiftError = new Error('Failed to open shift');
-		syncGlobalSettings.mockResolvedValueOnce();
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockRejectedValueOnce(openShiftError);
 
@@ -228,7 +242,12 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle downloadWorkLogTypes error and set error state', async () => {
 		const downloadError = new Error('Failed to download worklog types');
-		syncGlobalSettings.mockResolvedValueOnce();
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
@@ -263,7 +282,12 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should provide context values from storage', async () => {
-		syncGlobalSettings.mockResolvedValueOnce();
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce();
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		let contextValue;
 
@@ -294,6 +318,12 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should render children normally', async () => {
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		const {getByText} = render(
 			<ShiftTrackingProvider>
 				<div>Normal Child</div>
@@ -306,7 +336,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should handle empty storage values gracefully', async () => {
-		syncGlobalSettings.mockResolvedValueOnce();
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		// Configurar storage vacío para todas las llamadas
 		Storage.get.mockReturnValue(null);
@@ -335,7 +365,12 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should execute handleShiftTrackingInit successfully without errors', async () => {
-		syncGlobalSettings.mockResolvedValueOnce();
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
@@ -365,7 +400,12 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	it('should handle openShift error and not continue with downloadWorkLogTypes', async () => {
-		syncGlobalSettings.mockResolvedValueOnce();
+		Storage.get.mockReturnValueOnce({
+			settings: {hasStaffAuthorization: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		const openShiftError = new Error('Open shift failed');
 		openShift.mockRejectedValueOnce(openShiftError);
@@ -396,7 +436,12 @@ describe('ShiftTrackingProvider', () => {
 
 	describe('WorkLogs History Functionality', () => {
 		it('should call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: true', async () => {
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
@@ -421,7 +466,12 @@ describe('ShiftTrackingProvider', () => {
 		});
 
 		it('should NOT call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: false', async () => {
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
@@ -444,7 +494,12 @@ describe('ShiftTrackingProvider', () => {
 
 		it('should handle getShiftWorkLogsFromJanis error and set error state', async () => {
 			const workLogsError = new Error('Failed to fetch work logs');
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
@@ -495,8 +550,14 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(true);
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -540,7 +601,12 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
@@ -578,8 +644,17 @@ describe('ShiftTrackingProvider', () => {
 				closedWorkLogs: [],
 			};
 
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(false)
+				.mockReturnValueOnce(false);
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -618,7 +693,12 @@ describe('ShiftTrackingProvider', () => {
 				configurable: true,
 			});
 
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-123',
@@ -661,7 +741,12 @@ describe('ShiftTrackingProvider', () => {
 				configurable: true,
 			});
 
-			syncGlobalSettings.mockResolvedValueOnce();
+			Storage.get.mockReturnValueOnce({
+				settings: {hasStaffAuthorization: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-123',

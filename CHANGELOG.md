@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+## [2.1.0-beta.1] 2026-03-14
+
+### Added
+
+- `getGlobalStaffSettings` to download and save client settings in storage
+
+## [2.0.0] 2026-03-12
+
+### Breaking Changes
+
+- `openWorkLog()` now throws an error instead of returning `null` when receiving an invalid worklog
+- `finishWorkLog()` now throws an error instead of returning `null` when receiving an invalid worklog
+
+### Added
+
+- @janiscommerce/apps-helpers as peerDependency
+- @janiscommerce/apps-helpers as devDependency
+- support for open worklog custom start date
+
+### Changed
+
+- local helpers functions were replaced by apps-helpers utils
+- openWorklog and finishWorkLog date parameters
+
 ## [1.6.0] 2025-02-11
 
 ### Added
