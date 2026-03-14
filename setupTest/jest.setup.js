@@ -152,7 +152,6 @@ jest.mock('../lib/OfflineData', () => ({
 jest.mock('../lib/helpers/storage', () => ({
 	__esModule: true,
 	getWorkLogTypesData: jest.fn(),
-	getGlobalSettings: jest.fn(() => ({hasStaffAuthorization: true, inactivityTimeout: 0})),
 }));
 
 jest.mock('@janiscommerce/app-storage', () => ({

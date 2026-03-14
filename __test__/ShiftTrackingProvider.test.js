@@ -2,7 +2,6 @@ import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
 import {openShift, downloadWorkLogTypes, getShiftWorkLogsFromJanis} from '../lib/helpers/provider';
-import {getGlobalSettings} from '../lib/helpers/storage';
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
@@ -154,7 +153,6 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -182,7 +180,6 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -211,7 +208,6 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockRejectedValueOnce(openShiftError);
 
 		let contextValue;
@@ -248,7 +244,6 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -288,7 +283,6 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce();
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		let contextValue;
 
 		const TestComponent = () => {
@@ -337,7 +331,6 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle empty storage values gracefully', async () => {
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		// Configurar storage vacío para todas las llamadas
 		Storage.get.mockReturnValue(null);
 
@@ -371,7 +364,6 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		openShift.mockResolvedValueOnce({
 			openShiftId: 'shift-456',
 			getWorkLogs: false,
@@ -406,7 +398,6 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
 		const openShiftError = new Error('Open shift failed');
 		openShift.mockRejectedValueOnce(openShiftError);
 
@@ -442,7 +433,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -472,7 +463,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: false,
@@ -500,7 +491,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -556,7 +547,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(true);
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
@@ -607,7 +598,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-789',
 				getWorkLogs: true,
@@ -650,7 +641,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			jest
 				.spyOn(ShiftWorklogs, 'isValidWorkLog')
 				.mockReturnValueOnce(false)
@@ -699,7 +690,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-123',
 				getWorkLogs: false,
@@ -747,7 +738,7 @@ describe('ShiftTrackingProvider', () => {
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-			getGlobalSettings.mockReturnValueOnce({hasStaffAuthorization: true});
+
 			openShift.mockResolvedValueOnce({
 				openShiftId: 'shift-123',
 				getWorkLogs: false,
