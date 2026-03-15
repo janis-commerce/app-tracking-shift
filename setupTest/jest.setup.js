@@ -134,14 +134,6 @@ jest.mock('../lib/helpers', () => {
 	};
 });
 
-// Mock utils/provider functions
-jest.mock('../lib/helpers/provider', () => ({
-	openShift: jest.fn(),
-	downloadWorkLogTypes: jest.fn(),
-	isAuthorizedToUseStaffMS: jest.fn(),
-	getShiftWorkLogsFromJanis: jest.fn(),
-}));
-
 // Mock OfflineData
 jest.mock('../lib/OfflineData', () => ({
 	__esModule: true,

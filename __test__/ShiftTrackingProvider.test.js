@@ -1,11 +1,17 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
-import {openShift, downloadWorkLogTypes, getShiftWorkLogsFromJanis} from '../lib/helpers/provider';
+import {openShift, downloadWorkLogTypes, getShiftWorkLogsFromJanis} from '../lib/provider/helpers';
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
 import Shift from '../lib/Shift';
+
+jest.mock('../lib/provider/helpers', () => ({
+	openShift: jest.fn(),
+	downloadWorkLogTypes: jest.fn(),
+	getShiftWorkLogsFromJanis: jest.fn(),
+}));
 
 describe('ShiftTrackingProvider', () => {
 	const checkStaffMSAuthorizationSpy = jest.spyOn(Shift, 'checkStaffMSAuthorization');
