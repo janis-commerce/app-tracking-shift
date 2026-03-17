@@ -18,7 +18,6 @@ import {
 	CURRENT_WORKLOG_DATA,
 	EXCLUDED_WORKLOG_TYPES,
 	WORKLOG_TYPES_DATA,
-	STAFF_GLOBAL_SETTINGS,
 } from '../lib/constant';
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
@@ -1169,162 +1168,94 @@ describe('Shift', () => {
 
 	describe('checkStaffMSAuthorization', () => {
 		it('should return true when enabledShiftAndWorkLog is true', async () => {
-			StaffService.getSetting.mockResolvedValueOnce({
-				result: {
-					enabledShiftAndWorkLog: true,
-				},
+			StaffService.getSettings.mockResolvedValueOnce({
+				enabledShiftAndWorkLog: true,
 			});
 
 			const result = await Shift.checkStaffMSAuthorization();
 
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
 			expect(result).toBe(true);
 		});
 
 		it('should return false when enabledShiftAndWorkLog is false', async () => {
-			StaffService.getSetting.mockResolvedValueOnce({
-				result: {
-					enabledShiftAndWorkLog: false,
-				},
+			StaffService.getSettings.mockResolvedValueOnce({
+				enabledShiftAndWorkLog: false,
 			});
 
 			const result = await Shift.checkStaffMSAuthorization();
 
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
 			expect(result).toBe(false);
 		});
 
 		it('should return false when enabledShiftAndWorkLog is undefined', async () => {
-			StaffService.getSetting.mockResolvedValueOnce({
-				result: {
-					otherSetting: true,
-				},
+			StaffService.getSettings.mockResolvedValueOnce({
+				otherSetting: true,
 			});
 
 			const result = await Shift.checkStaffMSAuthorization();
 
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
 			expect(result).toBe(false);
 		});
 
 		it('should return false when result is undefined', async () => {
-			StaffService.getSetting.mockResolvedValueOnce({
-				result: undefined,
-			});
+			StaffService.getSettings.mockResolvedValueOnce(undefined);
 
 			const result = await Shift.checkStaffMSAuthorization();
 
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
 			expect(result).toBe(false);
 		});
 
 		it('should return false when response has no result property', async () => {
-			StaffService.getSetting.mockResolvedValueOnce({});
+			StaffService.getSettings.mockResolvedValueOnce({});
 
 			const result = await Shift.checkStaffMSAuthorization();
 
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
 			expect(result).toBe(false);
 		});
 
 		it('should handle staff service errors', async () => {
 			const error = new Error('Setting check failed');
-			StaffService.getSetting.mockRejectedValueOnce(error);
+			StaffService.getSettings.mockRejectedValueOnce(error);
 
 			await expect(Shift.checkStaffMSAuthorization()).rejects.toThrow(error);
 		});
 	});
 
 	describe('getGlobalStaffSettings', () => {
-		it('should return settings from storage when not expired', async () => {
-			const cachedSettings = {hasStaffAuthorization: true, inactivityTimeout: 30};
-			const futureExpiration = mockDate.getTime() + 60000;
-
-			Storage.get.mockReturnValueOnce({
-				settings: cachedSettings,
-				expirationTime: futureExpiration,
-				isExpired: false,
-			});
+		it('should return cache settings', async () => {
+			const cachedSettings = {
+				enabledShiftAndWorkLog: true,
+				inactivityTimeout: 30,
+				otherSetting: true,
+			};
+			StaffService.getSettings.mockReturnValueOnce(cachedSettings);
 
 			const result = await Shift.getGlobalStaffSettings();
 
-			expect(mockCrashlytics.log).toHaveBeenCalledWith('[getGlobalStaffSettings]:');
-			expect(StaffService.getSetting).not.toHaveBeenCalled();
-			expect(result).toEqual(cachedSettings);
+			expect(result).toEqual({
+				enabledShiftAndWorkLog: true,
+				inactivityTimeout: 30,
+			});
 		});
 
-		it('should fetch settings from API when settings are expired', async () => {
-			const pastExpiration = mockDate.getTime() - 60000;
-
-			Storage.get.mockReturnValueOnce({
-				settings: {},
-				expirationTime: pastExpiration,
-				isExpired: false,
-			});
-
-			spyIsInternetReachable.mockResolvedValueOnce(true);
-			StaffService.getSetting.mockResolvedValueOnce({
-				result: {enabledShiftAndWorkLog: true, inactivityTimeout: 15},
-			});
+		it('should return default global settings when settings cannot be fetched', async () => {
+			StaffService.getSettings.mockReturnValueOnce(undefined);
 
 			const result = await Shift.getGlobalStaffSettings();
 
-			expect(StaffService.getSetting).toHaveBeenCalledWith('global');
-			expect(Storage.set).toHaveBeenCalledWith(
-				STAFF_GLOBAL_SETTINGS,
-				expect.objectContaining({
-					settings: expect.objectContaining({
-						hasStaffAuthorization: true,
-						inactivityTimeout: 15,
-					}),
-					isExpired: false,
-					expirationTime: expect.any(Number),
-				})
-			);
-			expect(result).toEqual(
-				expect.objectContaining({hasStaffAuthorization: true, inactivityTimeout: 15})
-			);
-		});
-
-		it('should return stored settings when no internet but cached settings exist', async () => {
-			const pastExpiration = mockDate.getTime() - 60000;
-			const cachedSettings = {hasStaffAuthorization: true, inactivityTimeout: 30};
-
-			Storage.get.mockReturnValueOnce({
-				settings: cachedSettings,
-				expirationTime: pastExpiration,
-				isExpired: false,
+			expect(result).toEqual({
+				enabledShiftAndWorkLog: false,
+				inactivityTimeout: 0,
 			});
-
-			spyIsInternetReachable.mockResolvedValueOnce(false);
-
-			const result = await Shift.getGlobalStaffSettings();
-
-			expect(spyIsInternetReachable).toHaveBeenCalled();
-			expect(StaffService.getSetting).not.toHaveBeenCalled();
-			expect(result).toEqual(cachedSettings);
 		});
-
-		it('should save error state and reject when API request fails', async () => {
+		it('should throw an error when API request fails', async () => {
 			const error = new Error('API Error');
 
-			Storage.get.mockReturnValueOnce(null);
-			spyIsInternetReachable.mockResolvedValueOnce(true);
-			StaffService.getSetting.mockRejectedValueOnce(error);
+			StaffService.getSettings.mockRejectedValueOnce(error);
 
 			await expect(Shift.getGlobalStaffSettings()).rejects.toThrow('API Error');
-
-			expect(Storage.set).toHaveBeenCalledWith(STAFF_GLOBAL_SETTINGS, {
-				settings: {},
-				expirationTime: 0,
-				isExpired: true,
-			});
-			expect(mockCrashlytics.recordError).toHaveBeenCalledWith(
-				expect.any(Object),
-				'Error getting global staff settings'
-			);
 		});
-	})
+	});
 	describe('getWorkLogs', () => {
 		it('should throw error when user does not have staff authorization', async () => {
 			spyHasAuthorization(false);

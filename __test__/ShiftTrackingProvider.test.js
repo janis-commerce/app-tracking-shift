@@ -33,7 +33,7 @@ describe('ShiftTrackingProvider', () => {
 					workLogTypes: [{id: 1, name: 'Test Type', referenceId: 'ref-123'}],
 				}),
 				'worklog.data': JSON.stringify({id: 'worklog-456', type: 'test'}),
-				'staff.authorization': JSON.stringify({hasStaffAuthorization: true}),
+				'staff.settings': JSON.stringify({enabledShiftAndWorkLog: true}),
 			};
 			return mockData[key] || null;
 		});
@@ -53,7 +53,7 @@ describe('ShiftTrackingProvider', () => {
 	describe('Staff Authorization Validation', () => {
 		it('should not proceed with openShift and downloadWorkLogTypes when user is not authorized', async () => {
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: false},
+				settings: {enabledShiftAndWorkLog: false},
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(false);
 
@@ -81,7 +81,7 @@ describe('ShiftTrackingProvider', () => {
 		it('should set staffMSAuthorization error when authorization check fails', async () => {
 			const authError = new Error('Authorization failed');
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: false},
+				settings: {enabledShiftAndWorkLog: false},
 				isExpired: true,
 				expirationTime: 0,
 			});
@@ -124,7 +124,7 @@ describe('ShiftTrackingProvider', () => {
 		it('should handle authorization error and not proceed with subsequent operations', async () => {
 			const authError = new Error('User not found in staff system');
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: false},
+				settings: {enabledShiftAndWorkLog: false},
 				isExpired: true,
 				expirationTime: 0,
 			});
@@ -154,7 +154,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should call openShift and downloadWorkLogTypes on mount', async () => {
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -181,7 +181,7 @@ describe('ShiftTrackingProvider', () => {
 	it('should call openShift with error callback when provided', async () => {
 		const onError = jest.fn();
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -209,7 +209,7 @@ describe('ShiftTrackingProvider', () => {
 	it('should handle openShift error and set error state', async () => {
 		const openShiftError = new Error('Failed to open shift');
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -245,7 +245,7 @@ describe('ShiftTrackingProvider', () => {
 	it('should handle downloadWorkLogTypes error and set error state', async () => {
 		const downloadError = new Error('Failed to download worklog types');
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -284,7 +284,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should provide context values from storage', async () => {
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -319,7 +319,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should render children normally', async () => {
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -365,7 +365,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should execute handleShiftTrackingInit successfully without errors', async () => {
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -399,7 +399,7 @@ describe('ShiftTrackingProvider', () => {
 
 	it('should handle openShift error and not continue with downloadWorkLogTypes', async () => {
 		Storage.get.mockReturnValueOnce({
-			settings: {hasStaffAuthorization: true},
+			settings: {enabledShiftAndWorkLog: true},
 			isExpired: false,
 			expirationTime: Date.now() + 1000,
 		});
@@ -434,7 +434,7 @@ describe('ShiftTrackingProvider', () => {
 	describe('WorkLogs History Functionality', () => {
 		it('should call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: true', async () => {
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
@@ -464,7 +464,7 @@ describe('ShiftTrackingProvider', () => {
 
 		it('should NOT call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: false', async () => {
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
@@ -492,7 +492,7 @@ describe('ShiftTrackingProvider', () => {
 		it('should handle getShiftWorkLogsFromJanis error and set error state', async () => {
 			const workLogsError = new Error('Failed to fetch work logs');
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
@@ -548,7 +548,7 @@ describe('ShiftTrackingProvider', () => {
 			};
 
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
@@ -599,7 +599,7 @@ describe('ShiftTrackingProvider', () => {
 			};
 
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
@@ -642,7 +642,7 @@ describe('ShiftTrackingProvider', () => {
 			};
 
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
@@ -691,7 +691,7 @@ describe('ShiftTrackingProvider', () => {
 			});
 
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
@@ -739,7 +739,7 @@ describe('ShiftTrackingProvider', () => {
 			});
 
 			Storage.get.mockReturnValueOnce({
-				settings: {hasStaffAuthorization: true},
+				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
