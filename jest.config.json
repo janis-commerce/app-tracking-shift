@@ -11,6 +11,7 @@
 	"coverageDirectory": "coverage",
 	"collectCoverageFrom": [
 		"lib/Shift.js",
+		"lib/ShiftInactivity.js",
 		"lib/provider/ShiftTrackingProvider.js",
 		"lib/components/WithShiftTracking/index.js",
 		"!**/node_modules/**",
