@@ -67,6 +67,20 @@ describe('Shift', () => {
 		global.Date = RealDate;
 	});
 
+	describe('hasInactivityDetectionEnabled', () => {
+		it('should return true when inactivity timeout is greater than 0', () => {
+			Storage.get.mockReturnValueOnce({settings: {inactivityTimeout: 1000}});
+			expect(Shift.hasInactivityDetectionEnabled).toBe(true);
+		});
+		it('should return false when inactivity timeout is 0', () => {
+			Storage.get.mockReturnValueOnce({settings: {inactivityTimeout: 0}});
+			expect(Shift.hasInactivityDetectionEnabled).toBe(false);
+		});
+		it('should return false when inactivity timeout is not set', () => {
+			Storage.get.mockReturnValueOnce({});
+			expect(Shift.hasInactivityDetectionEnabled).toBe(false);
+		});
+	});
 	describe('open', () => {
 		it('should throw error when user does not have staff authorization', async () => {
 			spyHasAuthorization(false);
