@@ -24,6 +24,7 @@ import ShiftWorklogs from '../lib/ShiftWorklogs';
 import Formatter from '../lib/Formatter';
 import Shift from '../lib/Shift';
 import OfflineData from '../lib/OfflineData';
+import ShiftInactivity from '../lib/ShiftInactivity';
 
 // Mock para Date
 const mockDate = new Date('2024-01-15T10:30:00.000Z');
@@ -1477,6 +1478,44 @@ describe('Shift', () => {
 			expect(ShiftWorklogs.batch).not.toHaveBeenCalled();
 			expect(mockOfflineData.deleteAll).not.toHaveBeenCalled();
 			expect(result).toBe(null);
+		});
+	});
+
+	describe('resetInactivityTimer', () => {
+		it('should not call ShiftInactivity.resetTimer when user does not have staff authorization', () => {
+			spyHasAuthorization(false);
+			const spy = jest.spyOn(ShiftInactivity, 'resetTimer');
+
+			Shift.resetInactivityTimer();
+
+			expect(spy).not.toHaveBeenCalled();
+		});
+
+		it('should call ShiftInactivity.resetTimer when user has staff authorization', () => {
+			const spy = jest.spyOn(ShiftInactivity, 'resetTimer');
+
+			Shift.resetInactivityTimer();
+
+			expect(spy).toHaveBeenCalled();
+		});
+	});
+
+	describe('stopInactivityTimer', () => {
+		it('should not call ShiftInactivity.stopTimer when user does not have staff authorization', () => {
+			spyHasAuthorization(false);
+			const spy = jest.spyOn(ShiftInactivity, 'stopTimer');
+
+			Shift.stopInactivityTimer();
+
+			expect(spy).not.toHaveBeenCalled();
+		});
+
+		it('should call ShiftInactivity.stopTimer when user has staff authorization', () => {
+			const spy = jest.spyOn(ShiftInactivity, 'stopTimer');
+
+			Shift.stopInactivityTimer();
+
+			expect(spy).toHaveBeenCalled();
 		});
 	});
 
