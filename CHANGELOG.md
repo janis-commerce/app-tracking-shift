@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [2.2.0] 2026-03-30
+
+### Added
+
+- `WithInactivityDetection` HOC to detect user inactivity on screen and report it as a worklog [APPSRN-484](https://janiscommerce.atlassian.net/browse/APPSRN-484)
+- `resetInactivityTimer` and `stopInactivityTimer` methods to `Shift` for manual timer control [APPSRN-484](https://janiscommerce.atlassian.net/browse/APPSRN-484)
+
 ## [2.2.0-beta.2] 2026-03-19
 
 ### Added
