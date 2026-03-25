@@ -1,6 +1,6 @@
 {
 	"name": "@janiscommerce/app-tracking-shift",
-	"version": "2.1.0",
+	"version": "2.2.0-beta.2",
 	"main": "lib/index.js",
 	"module": "lib/index.js",
 	"exports": {
@@ -50,6 +50,7 @@
 		"@janiscommerce/app-request": ">=2.0.0",
 		"@janiscommerce/app-storage": ">=1.1.0",
 		"@janiscommerce/apps-helpers": ">=2.0.0",
+		"@react-navigation/native": ">=6.0.0",
 		"react": ">=17.0.2 <19",
 		"react-native": ">=0.67.5 <0.75"
 	},
@@ -85,6 +86,7 @@
 		"react-native-device-info": "^10.12.0",
 		"react-native-inappbrowser-reborn": "^3.7.0",
 		"react-native-mmkv": "2.12.2",
+		"@react-navigation/native": "6.1.6",
 		"react-test-renderer": "18.2.0"
 	}
 }

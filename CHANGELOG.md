@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [2.2.0-beta.2] 2026-03-19
+
+### Added
+
+`hasInactivityDetectionEnabled` getter for the shift class detects whether the client has configured inactivity or not.
+
+## [2.2.0-beta.1] 2026-03-19
+
+### Added
+
+- `WithInactivityDetection` HOC, to track user inactivity on screen and report it to Janis
+- `resetInactivityTimer` and `stopInactivityTimer` to handle inactivity timer from actions that are not detected by the HOC
+
 ## [2.1.0] 2026-03-18
 
 ### Added
