@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.3.0] 2026-03-31
+
 ### Removed
 
 - Work log type retrieval now returns all available active types instead of a previously restricted subset
