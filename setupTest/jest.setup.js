@@ -11,7 +11,7 @@ jest.mock('@janiscommerce/app-request', () => ({
 	default: jest.fn().mockImplementation(() => mockRequest),
 }));
 
-jest.mock('../lib/utils/crashlytics', () => ({
+jest.mock('../lib/helpers/crashlytics', () => ({
 	__esModule: true,
 	default: mockCrashlytics,
 }));
@@ -77,7 +77,7 @@ jest.mock('../lib/StaffApiServices', () => ({
 	getShiftsList: jest.fn(),
 	getWorkLogTypes: jest.fn(),
 	postWorklog: jest.fn(),
-	getSetting: jest.fn(),
+	getSettings: jest.fn(),
 }));
 
 // Mock ShiftWorklogs
@@ -91,6 +91,7 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		batch: jest.fn(),
 		createId: jest.fn(),
 		formatForJanis: jest.fn(),
+		isValidWorkLog: jest.fn(),
 	},
 }));
 
@@ -125,23 +126,13 @@ jest.mock('react-native-mmkv', () => ({
 	}),
 }));
 
-jest.mock('../lib/utils/helpers', () => {
-	const actualHelpers = jest.requireActual('../lib/utils/helpers');
+jest.mock('../lib/helpers', () => {
+	const actualHelpers = jest.requireActual('../lib/helpers');
 	return {
 		__esModule: true,
 		...actualHelpers,
-		generateRandomId: jest.fn(() => 'mock-random-id'),
-		promiseWrapper: jest.fn(),
 	};
 });
-
-// Mock utils/provider functions
-jest.mock('../lib/utils/provider', () => ({
-	openShift: jest.fn(),
-	downloadWorkLogTypes: jest.fn(),
-	isAuthorizedToUseStaffMS: jest.fn(),
-	getShiftWorkLogsFromJanis: jest.fn(),
-}));
 
 // Mock OfflineData
 jest.mock('../lib/OfflineData', () => ({
@@ -150,10 +141,9 @@ jest.mock('../lib/OfflineData', () => ({
 }));
 
 // Mock utils/storage
-jest.mock('../lib/utils/storage', () => ({
+jest.mock('../lib/helpers/storage', () => ({
 	__esModule: true,
 	getWorkLogTypesData: jest.fn(),
-	getStaffAuthorizationData: jest.fn(() => ({hasStaffAuthorization: true})),
 }));
 
 jest.mock('@janiscommerce/app-storage', () => ({

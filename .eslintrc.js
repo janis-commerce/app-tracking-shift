@@ -29,6 +29,19 @@ module.exports = {
 			},
 		],
 		'import/prefer-default-export': 'off',
+		'import/no-extraneous-dependencies': [
+			'error',
+			{
+				devDependencies: [
+					'**/__test__/**',
+					'**/__mocks__/**',
+					'**/setupTest/**',
+					'*.config.js',
+					'*.setup.js',
+				],
+				peerDependencies: true,
+			},
+		],
 		'react/no-array-index-key': 'off',
 		'react/state-in-constructor': 'off',
 		'react/static-property-placement': 'off',

@@ -2,6 +2,56 @@
 
 ## [Unreleased]
 
+## [2.3.0] 2026-03-31
+
+### Removed
+
+- Work log type retrieval now returns all available active types instead of a previously restricted subset
+
+## [2.2.0] 2026-03-30
+
+### Added
+
+- `WithInactivityDetection` HOC to detect user inactivity on screen and report it as a worklog [APPSRN-484](https://janiscommerce.atlassian.net/browse/APPSRN-484)
+- `resetInactivityTimer` and `stopInactivityTimer` methods to `Shift` for manual timer control [APPSRN-484](https://janiscommerce.atlassian.net/browse/APPSRN-484)
+
+## [2.2.0-beta.2] 2026-03-19
+
+### Added
+
+`hasInactivityDetectionEnabled` getter for the shift class detects whether the client has configured inactivity or not.
+
+## [2.2.0-beta.1] 2026-03-19
+
+### Added
+
+- `WithInactivityDetection` HOC, to track user inactivity on screen and report it to Janis
+- `resetInactivityTimer` and `stopInactivityTimer` to handle inactivity timer from actions that are not detected by the HOC
+
+## [2.1.0] 2026-03-18
+
+### Added
+
+- `getGlobalStaffSettings` to download and save client settings in storage
+
+## [2.0.0] 2026-03-12
+
+### Breaking Changes
+
+- `openWorkLog()` now throws an error instead of returning `null` when receiving an invalid worklog
+- `finishWorkLog()` now throws an error instead of returning `null` when receiving an invalid worklog
+
+### Added
+
+- @janiscommerce/apps-helpers as peerDependency
+- @janiscommerce/apps-helpers as devDependency
+- support for open worklog custom start date
+
+### Changed
+
+- local helpers functions were replaced by apps-helpers utils
+- openWorklog and finishWorkLog date parameters
+
 ## [1.6.0] 2025-02-11
 
 ### Added

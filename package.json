@@ -1,6 +1,6 @@
 {
 	"name": "@janiscommerce/app-tracking-shift",
-	"version": "1.7.0-beta.0",
+	"version": "2.3.0",
 	"main": "lib/index.js",
 	"module": "lib/index.js",
 	"exports": {
@@ -51,7 +51,9 @@
 		"@janiscommerce/app-storage": ">=1.1.0",
 		"react": ">=17.0.2 <20.0.0",
 		"react-dom": ">=17.0.2 <20.0.0",
-		"react-native": ">=0.71.5 <0.82.0"
+		"react-native": ">=0.71.5 <0.82.0",
+		"@janiscommerce/apps-helpers": ">=2.0.0",
+		"@react-navigation/native": ">=6.0.0"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.0.0",
@@ -61,6 +63,7 @@
 		"@janiscommerce/app-crashlytics": "^2.1.0",
 		"@janiscommerce/app-request": "^2.6.0",
 		"@janiscommerce/app-storage": "^1.1.0",
+		"@janiscommerce/apps-helpers": "^2.2.0",
 		"@janiscommerce/oauth-native": "^1.10.2",
 		"@testing-library/react": "^16.3.0",
 		"@testing-library/react-native": "^12.0.1",
@@ -83,8 +86,9 @@
 		"react-dom": "18.2.0",
 		"react-native": "0.71.6",
 		"react-native-device-info": "^10.12.0",
-		"react-native-mmkv": "2.12.2",
 		"react-native-inappbrowser-reborn": "^3.7.0",
+		"react-native-mmkv": "2.12.2",
+		"@react-navigation/native": "6.1.6",
 		"react-test-renderer": "18.2.0"
 	}
 }
