@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [2.4.0-beta.0] 2026-04-16
+
+- Add inactivity in beta version
+
 ## [2.3.0] 2026-03-31
 
 ### Removed
