@@ -6,6 +6,17 @@
 
 - Add inactivity in beta version
 
+## [2.3.1-beta.0]
+
+### Added
+
+- `isNetworkError` helper to detect axios network-level errors (e.g. connection lost mid-request), extending offline save coverage in `openWorkLog` and `finishWorkLog` for cases where the connection drops during the `isClosed` check
+
+### Fixed
+
+- `isClosed` now verifies shift status against the server via `getUserOpenShift` instead of comparing a local `dateToClose` date, ensuring the check always reflects real server state
+- All callers of `isClosed` updated to properly `await` the method
+
 ## [2.3.0] 2026-03-31
 
 ### Removed
