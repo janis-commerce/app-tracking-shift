@@ -172,7 +172,7 @@ describe('Shift', () => {
 		});
 
 		it('should return null when shift is closed', async () => {
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(true);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(true);
 
 			const result = await Shift.update({warehouseId: 'warehouse-123'});
 
@@ -180,7 +180,7 @@ describe('Shift', () => {
 		});
 
 		it('should return shift id when warehouseId has not changed', async () => {
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
 			Storage.get.mockReturnValueOnce('shift-456');
 
@@ -194,7 +194,7 @@ describe('Shift', () => {
 			const mockShiftId = 'shift-789';
 			const newWarehouseId = 'warehouse-456';
 
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
 			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
 
@@ -216,7 +216,7 @@ describe('Shift', () => {
 		it('should handle staff service errors', async () => {
 			const error = new Error('Update failed');
 
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
 			Storage.get.mockReturnValueOnce({warehouseId: 'warehouse-123'});
 			StaffService.updateShift.mockRejectedValueOnce(error);
@@ -238,7 +238,7 @@ describe('Shift', () => {
 		it('should finish a shift successfully and send pending worklogs', async () => {
 			const mockShiftId = 'shift-999';
 
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false).mockResolvedValueOnce(false);
 
 			mockOfflineData.hasData = true;
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
@@ -272,7 +272,7 @@ describe('Shift', () => {
 		it('should finish a shift successfully without pending worklogs', async () => {
 			const mockShiftId = 'shift-998';
 
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			mockOfflineData.hasData = false;
 
 			StaffService.closeShift.mockResolvedValueOnce({
@@ -298,7 +298,7 @@ describe('Shift', () => {
 		it('should reopen a shift if it is expired before to finish', async () => {
 			const mockShiftId = 'shift-999';
 
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(true);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(true).mockResolvedValueOnce(false);
 			jest.spyOn(Shift, 'isExpired').mockReturnValueOnce(false);
 
 			mockOfflineData.hasData = true;
@@ -336,7 +336,7 @@ describe('Shift', () => {
 			const specificDate = '2024-01-15T18:00:00.000Z';
 
 			mockOfflineData.hasData = false;
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
@@ -357,7 +357,7 @@ describe('Shift', () => {
 			const specificDate = '2024-01-15T18:00:00.000Z';
 
 			mockOfflineData.hasData = false;
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: undefined,
@@ -377,7 +377,7 @@ describe('Shift', () => {
 		it('should handle staff service errors', async () => {
 			const error = new Error('Close shift failed');
 			mockOfflineData.hasData = false;
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			Storage.get.mockReturnValueOnce(mockShiftData);
 
 			StaffService.closeShift.mockRejectedValueOnce(error);
@@ -391,7 +391,7 @@ describe('Shift', () => {
 			const mockShiftId = 'shift-777';
 
 			mockOfflineData.hasData = false;
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 
 			StaffService.closeShift.mockResolvedValueOnce({
 				result: {id: mockShiftId},
@@ -650,7 +650,7 @@ describe('Shift', () => {
 				.mockReturnValueOnce(mockShiftId); // SHIFT_ID
 			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			ShiftWorklogs.formatForJanis.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 			ShiftWorklogs.batch.mockResolvedValueOnce(null);
 
@@ -799,7 +799,7 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			ShiftWorklogs.formatForJanis.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 			ShiftWorklogs.batch.mockResolvedValueOnce(null);
 
@@ -822,7 +822,7 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(true);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(true);
 			const reOpenSpy = jest.spyOn(Shift, 'reOpen').mockResolvedValueOnce(null);
 			mockOfflineData.hasData = true;
 			mockOfflineData.get.mockReturnValueOnce(mockPendingWorkLogs);
@@ -854,7 +854,7 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
 			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			ShiftWorklogs.batch.mockRejectedValueOnce({result: {message: 'API Error'}, statusCode: 400});
 
 			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('API Error');
@@ -922,6 +922,30 @@ describe('Shift', () => {
 				})
 			);
 			expect(result).toEqual(mockFormattedId);
+		});
+
+		it('should save offline when isClosed request fails with network error after internet check', async () => {
+			const mockShiftId = 'shift-123';
+			const mockFormattedId = 'ref-123-mock-random-id';
+			const isoStartDate = '2026-01-10T08:00:00.000Z';
+			const mockParams = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: isoStartDate,
+			};
+
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
+			Storage.get.mockReturnValueOnce(undefined).mockReturnValueOnce(mockShiftId);
+			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
+			spyIsInternetReachable.mockResolvedValueOnce(true);
+			jest.spyOn(Shift, 'isClosed').mockRejectedValueOnce(new Error('Network Error'));
+
+			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('Network Error');
+			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
+				referenceId: mockParams.referenceId,
+				startDate: isoStartDate,
+			});
 		});
 
 		it('should strip endDate from workLog when opening', async () => {
@@ -1096,7 +1120,7 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(mockShiftStatus);
 
 			spyIsInternetReachable.mockResolvedValueOnce(true);
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 			ShiftWorklogs.formatForJanis.mockReturnValueOnce(mockFormattedOfflineWorkLogs);
 			ShiftWorklogs.batch.mockResolvedValueOnce(null);
 
@@ -1127,7 +1151,7 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(mockWorkLogId); // CURRENT_WORKLOG_ID
 			Storage.get.mockReturnValueOnce(mockCurrentWorkLog); // CURRENT_WORKLOG_DATA
 			Storage.get.mockReturnValueOnce('paused'); // SHIFT_STATUS
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 
 			await Shift.finishWorkLog(mockParams);
 
@@ -1156,7 +1180,7 @@ describe('Shift', () => {
 			Storage.get.mockReturnValueOnce(mockCurrentWorkLog);
 			Storage.get.mockReturnValueOnce(mockShiftStatus);
 			spyIsInternetReachable.mockResolvedValueOnce(true);
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(true);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(true);
 			jest.spyOn(Shift, 'reOpen').mockResolvedValueOnce(null);
 			jest
 				.spyOn(ShiftWorklogs, 'isValidWorkLog')
@@ -1173,6 +1197,40 @@ describe('Shift', () => {
 			ShiftWorklogs.batch.mockRejectedValueOnce({result: {message: 'API Error'}, statusCode: 400});
 
 			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow('API Error');
+			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
+				referenceId: mockParams.referenceId,
+				endDate: mockDate.toISOString(),
+			});
+			expect(Storage.remove).toHaveBeenCalled();
+		});
+
+		it('should save offline when isClosed request fails with network error after internet check', async () => {
+			const mockWorkLogId = 'worklog-456';
+			const mockParams = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
+			const mockCurrentWorkLog = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: '2024-01-15T09:00:00.000Z',
+			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true)
+				.mockReturnValueOnce(true)
+				.mockReturnValueOnce(true);
+			Storage.get.mockReturnValueOnce(mockWorkLogId);
+			Storage.get.mockReturnValueOnce(mockCurrentWorkLog);
+			Storage.get.mockReturnValueOnce('opened');
+			spyIsInternetReachable.mockResolvedValueOnce(true);
+			jest.spyOn(Shift, 'isClosed').mockRejectedValueOnce(new Error('Network Error'));
+
+			await expect(Shift.finishWorkLog(mockParams)).rejects.toThrow('Network Error');
 			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
 				referenceId: mockParams.referenceId,
 				endDate: mockDate.toISOString(),
@@ -1362,26 +1420,32 @@ describe('Shift', () => {
 	});
 
 	describe('isClosed', () => {
-		it('should return false when dateToClose is not exceeded', () => {
-			const storageData = {
-				dateToClose: '2024-01-15T18:00:00.000Z', // Fecha futura (7.5 horas después del mockDate)
-			};
+		it('should return false when shift is open', async () => {
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [{status: 'opened'}],
+			});
 
-			Storage.get.mockReturnValueOnce(storageData);
-
-			const result = Shift.isClosed();
+			const result = await Shift.isClosed();
 
 			expect(result).toBe(false);
 		});
 
-		it('should return true when dateToClose is exceeded', () => {
-			const storageData = {
-				dateToClose: '2024-01-15T08:00:00.000Z', // Fecha pasada (2.5 horas antes del mockDate)
-			};
+		it('should return true when no open shift is found', async () => {
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [],
+			});
 
-			Storage.get.mockReturnValueOnce(storageData);
+			const result = await Shift.isClosed();
 
-			const result = Shift.isClosed();
+			expect(result).toBe(true);
+		});
+
+		it('should return true when shift list result is undefined', async () => {
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: undefined,
+			});
+
+			const result = await Shift.isClosed();
 
 			expect(result).toBe(true);
 		});
@@ -1425,7 +1489,7 @@ describe('Shift', () => {
 		});
 
 		it('should send pending worklogs successfully', async () => {
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(false);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(false);
 
 			// Hay datos pendientes
 			mockOfflineData.hasData = true;
@@ -1444,7 +1508,7 @@ describe('Shift', () => {
 		});
 
 		it('should reopen a shift if it is expired before to send pending worklogs', async () => {
-			jest.spyOn(Shift, 'isClosed').mockReturnValueOnce(true);
+			jest.spyOn(Shift, 'isClosed').mockResolvedValueOnce(true);
 			jest.spyOn(Shift, 'isExpired').mockReturnValueOnce(false);
 			const reOpenSpy = jest.spyOn(Shift, 'reOpen').mockResolvedValueOnce(null);
 
