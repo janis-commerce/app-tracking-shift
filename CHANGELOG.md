@@ -2,7 +2,13 @@
 
 ## [Unreleased]
 
-## [2.3.1-beta.0]
+## [2.3.1-beta.1] 2026-05-07
+
+### Fixed
+
+- `openWorkLog` now changes shift status after re open when this is closed. This applies to worklogs that need to pause the shift
+
+## [2.3.1-beta.0] 2026-05-07
 
 ### Added
 
