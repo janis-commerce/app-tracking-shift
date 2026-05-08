@@ -1507,6 +1507,38 @@ describe('Shift', () => {
 		});
 	});
 
+	describe('isClosed', () => {
+		it('should return false when shift is open', async () => {
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [{status: 'opened'}],
+			});
+
+			const result = await Shift.isClosed();
+
+			expect(result).toBe(false);
+		});
+
+		it('should return true when no open shift is found', async () => {
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [],
+			});
+
+			const result = await Shift.isClosed();
+
+			expect(result).toBe(true);
+		});
+
+		it('should return true when shift list result is undefined', async () => {
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: undefined,
+			});
+
+			const result = await Shift.isClosed();
+
+			expect(result).toBe(true);
+		});
+	});
+
 	describe('sendPendingWorkLogs', () => {
 		it('should throw error when user does not have staff authorization', async () => {
 			spyHasAuthorization(false);
