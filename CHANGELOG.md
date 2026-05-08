@@ -6,6 +6,12 @@
 
 - Add inactivity in beta version
 
+## [2.3.1-beta.2] 2026-05-08
+
+### Added
+
+- Now, `reOpen` updates the shift status situationally.
+
 ## [2.3.1-beta.0]
 
 ### Added
