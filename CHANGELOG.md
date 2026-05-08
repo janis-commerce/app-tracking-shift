@@ -6,10 +6,22 @@
 
 - Add inactivity in beta version
 
+## [2.3.1-beta.4] 2026-05-08
+
+### Changed
+
+- Restored `isClosed` method
+
 ## [2.3.1-beta.3] 2026-05-08
+
+### Added
 
 - Now, The `_withReopenRetry` method handles whether the executed request fails because the user's shift is closed or not.
   If it fails due to the shift status, it executes the request to reopen it and then re-attempts to send the information.
+
+### Removed
+
+- `isClosed` method was deleted
 
 ## [2.3.1-beta.2] 2026-05-08
 
