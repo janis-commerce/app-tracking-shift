@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [2.4.0-beta.1] 2026-05-08
+
+### Added
+
+- Now, The `_withReopenRetry` method handles whether the executed request fails because the user's shift is closed or not.
+  If it fails due to the shift status, it executes the request to reopen it and then re-attempts to send the information.
+
 ## [2.4.0-beta.0] 2026-04-16
 
 - Add inactivity in beta version
