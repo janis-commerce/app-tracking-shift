@@ -13,6 +13,19 @@
 
 - Add inactivity in beta version
 
+## [2.3.1-beta.5] 2026-05-14
+
+### Added
+
+- `CustomError` class extending `Error` with `statusCode`, `code`, and `isInternalError` static method for centralized error classification
+- `CustomError.buildError` static method that normalizes any error (string, API response object, or connectivity error) into a `CustomError` instance, inferring the axios error code from the message for connectivity errors
+- `CustomError.isInternalError` static method to distinguish internal validation errors from API and connectivity errors, used to decide whether to save worklogs offline
+
+### Changed
+
+- `Shift` methods now use `CustomError.buildError` instead of `errorParser` for error normalization
+- `openWorkLog` and `finishWorkLog` now use `CustomError.isInternalError` to determine if data should be saved offline, replacing the `isApiError || isNetworkError` pattern
+
 ## [2.3.1-beta.4] 2026-05-08
 
 ### Changed
