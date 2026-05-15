@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [2.3.1-beta.6] 2026-05-15
+
+### Removed
+
+- `instanceId` from `WithInactivityDetection` `useEffect` dependencies
+
 ## [2.3.1-beta.5] 2026-05-14
 
 ### Added
@@ -26,7 +32,7 @@
 ### Added
 
 - Now, The `_withReopenRetry` method handles whether the executed request fails because the user's shift is closed or not.
-  If it fails due to the shift status, it executes the request to reopen it and then re-attempts to send the information.
+If it fails due to the shift status, it executes the request to reopen it and then re-attempts to send the information.
 
 ### Removed
 
@@ -214,3 +220,4 @@
 - Method to get shift report
 - WithTrackingShift hoc
 - Possibility to work offline
+
