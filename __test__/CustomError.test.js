@@ -23,7 +23,9 @@ describe('CustomError', () => {
 		});
 
 		it('should return false when receives a raw API error object', () => {
-			expect(CustomError.isInternalError({statusCode: 400, result: {message: 'Bad request'}})).toBe(false);
+			expect(CustomError.isInternalError({statusCode: 400, result: {message: 'Bad request'}})).toBe(
+				false
+			);
 		});
 
 		it('should return false when receives a raw connectivity error object', () => {
