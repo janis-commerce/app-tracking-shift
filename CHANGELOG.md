@@ -2,81 +2,22 @@
 
 ## [Unreleased]
 
-## [2.3.1-beta.8] 2026-05-18
+## [2.3.1] 2026-05-18
+
+### Added
+
+- `CustomError` class extending `Error` with `code` and `statusCode` fields, and `isInternalError` static method to distinguish internal validation errors from API/connectivity errors
+- `isShiftClosedError` helper to detect "No opened shift found" API errors
+- `_withReopenRetry` private method that executes a callback and, if it fails with a closed shift error, reopens the shift and retries once automatically
+- `reOpen` now accepts `{ updateStatusAfterReOpen }` option to conditionally skip the status update after reopening
 
 ### Changed
 
-- `CustomError` simplified: constructor args reordered to `(message, code, statusCode)`, `INTERNAL_CODE` exported as `'INTERNAL_ERROR'`, and `isInternalError` now only validates against `code`
-- `startInactivityWorkLog` in `WithInactivityDetection` now only includes `startDate` if `lastTimerResetAt` is a valid number; the inactivity worklog start time is calculated as `lastTimerResetAt + timeout`, so it reflects when inactivity actually began rather than the last user interaction
-
-### Removed
-
-- `CustomError.buildError` static method removed in favor of the existing `errorParser` helper to avoid duplication
-
-## [2.3.1-beta.7] 2026-05-15
-
-### Removed
-
-- `console.log` was removed
-
-## [2.3.1-beta.6] 2026-05-15
-
-### Removed
-
-- `instanceId` from `WithInactivityDetection` `useEffect` dependencies
-
-## [2.3.1-beta.5] 2026-05-14
-
-### Added
-
-- `CustomError` class extending `Error` with `statusCode`, `code`, and `isInternalError` static method for centralized error classification
-- `CustomError.buildError` static method that normalizes any error (string, API response object, or connectivity error) into a `CustomError` instance, inferring the axios error code from the message for connectivity errors
-- `CustomError.isInternalError` static method to distinguish internal validation errors from API and connectivity errors, used to decide whether to save worklogs offline
-
-### Changed
-
-- `Shift` methods now use `CustomError.buildError` instead of `errorParser` for error normalization
-- `openWorkLog` and `finishWorkLog` now use `CustomError.isInternalError` to determine if data should be saved offline, replacing the `isApiError || isNetworkError` pattern
-
-## [2.3.1-beta.4] 2026-05-08
-
-### Changed
-
-- Restored `isClosed` method
-
-## [2.3.1-beta.3] 2026-05-08
-
-### Added
-
-- Now, The `_withReopenRetry` method handles whether the executed request fails because the user's shift is closed or not.
-  If it fails due to the shift status, it executes the request to reopen it and then re-attempts to send the information.
-
-### Removed
-
-- `isClosed` method was deleted
-
-## [2.3.1-beta.2] 2026-05-08
-
-### Added
-
-- Now, `reOpen` updates the shift status situationally.
-
-## [2.3.1-beta.1] 2026-05-07
-
-### Fixed
-
-- `openWorkLog` now changes shift status after re open when this is closed. This applies to worklogs that need to pause the shift
-
-## [2.3.1-beta.0] 2026-05-07
-
-### Added
-
-- `isNetworkError` helper to detect axios network-level errors (e.g. connection lost mid-request), extending offline save coverage in `openWorkLog` and `finishWorkLog` for cases where the connection drops during the `isClosed` check
-
-### Fixed
-
-- `isClosed` now verifies shift status against the server via `getUserOpenShift` instead of comparing a local `dateToClose` date, ensuring the check always reflects real server state
-- All callers of `isClosed` updated to properly `await` the method
+- `isClosed` now checks shift status via API (`getUserOpenShift`) instead of comparing local `dateToClose` date
+- `openWorkLog`, `finishWorkLog`, `finish`, `update`, and `sendPendingWorkLogs` now use `_withReopenRetry` to handle closed shift errors automatically
+- `openWorkLog` and `finishWorkLog` now use `CustomError.isInternalError` to determine whether to save worklogs offline
+- `WithInactivityDetection` fixes `startDate` calculation: uses `lastTimerResetAt + timeout` only when `lastTimerResetAt` is a valid number, and removes `instanceId` from `useEffect` dependencies
+- `ShiftInactivity.startTimer` no longer resets `instanceId` to `null` when called without one; uses `??` to preserve the existing value
 
 ## [2.3.0] 2026-03-31
 
