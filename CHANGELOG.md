@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [2.3.1-beta.8] 2026-05-18
+
+### Changed
+
+- `CustomError` simplified: constructor args reordered to `(message, code, statusCode)`, `INTERNAL_CODE` exported as `'INTERNAL_ERROR'`, and `isInternalError` now only validates against `code`
+- `startInactivityWorkLog` in `WithInactivityDetection` now only includes `startDate` if `lastTimerResetAt` is a valid number; the inactivity worklog start time is calculated as `lastTimerResetAt + timeout`, so it reflects when inactivity actually began rather than the last user interaction
+
+### Removed
+
+- `CustomError.buildError` static method removed in favor of the existing `errorParser` helper to avoid duplication
+
 ## [2.3.1-beta.7] 2026-05-15
 
 ### Removed
