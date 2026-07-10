@@ -92,6 +92,8 @@ jest.mock('../lib/ShiftWorklogs', () => ({
 		createId: jest.fn(),
 		formatForJanis: jest.fn(),
 		isValidWorkLog: jest.fn(),
+		isPausingWorkLog: jest.fn(),
+		filterShiftWorkLogs: jest.fn(({workLogs} = {}) => workLogs || []),
 	},
 }));
 

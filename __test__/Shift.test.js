@@ -18,6 +18,8 @@ import {
 	CURRENT_WORKLOG_DATA,
 	EXCLUDED_WORKLOG_TYPES,
 	WORKLOG_TYPES_DATA,
+	OFFLINE_DATA,
+	LAST_TIMER_RESET_AT,
 } from '../lib/constant';
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
@@ -25,6 +27,9 @@ import Formatter from '../lib/Formatter';
 import Shift from '../lib/Shift';
 import OfflineData from '../lib/OfflineData';
 import ShiftInactivity from '../lib/ShiftInactivity';
+import getUserId from '../lib/helpers/userInfo/getUserId';
+
+jest.mock('../lib/helpers/userInfo/getUserId', () => jest.fn());
 
 // Mock para Date
 const mockDate = new Date('2024-01-15T10:30:00.000Z');
@@ -47,12 +52,15 @@ describe('Shift', () => {
 		mockOfflineData.get.mockReturnValue([]);
 		mockOfflineData.delete.mockImplementation(() => {});
 		mockOfflineData.deleteAll.mockImplementation(() => {});
+		mockOfflineData.replaceAll.mockImplementation(() => {});
 		mockOfflineData.hasData = false;
 
 		// Resetear mocks completamente para evitar interferencias
 		Storage.get.mockReset();
 
 		spyHasAuthorization(true);
+
+		getUserId.mockResolvedValue('user-123');
 
 		// Mock de Date simplificado
 		global.Date = jest.fn((dateString) => {
@@ -89,28 +97,79 @@ describe('Shift', () => {
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
-		it('should start a shift with specific date', async () => {
+		it('should create a new shift when there is no userId', async () => {
 			const mockShiftId = 'shift-456';
-			const specificDate = '2024-01-15T10:00:00.000Z';
-			const mockOpenShift = {id: mockShiftId, startDate: '2024-01-15T09:00:00.000Z'};
-
-			StaffService.openShift.mockResolvedValueOnce({
-				result: {id: mockShiftId},
-			});
+			getUserId.mockResolvedValueOnce('');
+			StaffService.openShift.mockResolvedValueOnce({result: {id: mockShiftId}});
 			StaffService.getShiftsList.mockResolvedValueOnce({
-				result: [mockOpenShift],
+				result: [{id: mockShiftId, startDate: '2024-01-15T09:00:00.000Z'}],
 			});
 
-			const result = await Shift.open({date: specificDate});
+			const result = await Shift.open();
 
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_ID, mockShiftId);
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened');
-			expect(mockCrashlytics.log).toHaveBeenCalled();
+			expect(OfflineData.deleteAll).toHaveBeenCalled();
+			expect(StaffService.openShift).toHaveBeenCalled();
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_ID, mockShiftId, {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened', {
+				expireWithVersion: true,
+			});
 			expect(result).toBe(mockShiftId);
+		});
+
+		it('should create a new shift when the user has no open remote shift', async () => {
+			const mockShiftId = 'shift-456';
+			getUserId.mockResolvedValueOnce('user-123');
+			StaffService.getShiftsList
+				.mockResolvedValueOnce({result: []})
+				.mockResolvedValueOnce({result: [{id: mockShiftId}]});
+			StaffService.openShift.mockResolvedValueOnce({result: {id: mockShiftId}});
+
+			const result = await Shift.open();
+
+			expect(StaffService.openShift).toHaveBeenCalled();
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_ID, mockShiftId, {
+				expireWithVersion: true,
+			});
+			expect(result).toBe(mockShiftId);
+		});
+
+		it('should reuse the current shift when the remote id matches the local id', async () => {
+			getUserId.mockResolvedValueOnce('user-123');
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-123' : null));
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [{id: 'shift-123', status: 'opened'}],
+			});
+
+			const result = await Shift.open();
+
+			expect(StaffService.openShift).not.toHaveBeenCalled();
+			expect(result).toBe('shift-123');
+		});
+
+		it('should adopt the remote shift when the remote id differs from the local id', async () => {
+			const remoteShift = {id: 'remote-999', status: 'opened', warehouseId: 'wh-1'};
+			getUserId.mockResolvedValueOnce('user-123');
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-local' : null));
+			StaffService.getShiftsList.mockResolvedValueOnce({result: [remoteShift]});
+
+			const result = await Shift.open();
+
+			expect(StaffService.openShift).not.toHaveBeenCalled();
+			expect(Storage.remove).toHaveBeenCalledWith(CURRENT_WORKLOG_ID);
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_ID, 'remote-999', {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_DATA, remoteShift, {
+				expireWithVersion: true,
+			});
+			expect(result).toBe('remote-999');
 		});
 
 		it('should handle staff service errors', async () => {
 			const error = new Error('API Error');
+			getUserId.mockResolvedValueOnce('');
 			StaffService.openShift.mockRejectedValueOnce(error);
 
 			await expect(Shift.open()).rejects.toThrow('API Error');
@@ -118,28 +177,10 @@ describe('Shift', () => {
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 
-		it('should start a shift successfully even with minimal data', async () => {
-			const mockShiftId = 'shift-789';
-			const mockOpenShift = {id: mockShiftId, startDate: '2024-01-15T10:00:00.000Z'};
-
-			StaffService.openShift.mockResolvedValueOnce({
-				result: {id: mockShiftId},
-			});
-			StaffService.getShiftsList.mockResolvedValueOnce({
-				result: [mockOpenShift],
-			});
-
-			const result = await Shift.open();
-
-			expect(mockCrashlytics.log).toHaveBeenCalled();
-			expect(result).toBe(mockShiftId);
-		});
-
 		it('should handle response without result', async () => {
+			getUserId.mockResolvedValueOnce('');
 			StaffService.openShift.mockResolvedValueOnce({});
-			StaffService.getShiftsList.mockResolvedValueOnce({
-				result: [],
-			});
+			StaffService.getShiftsList.mockResolvedValueOnce({result: []});
 
 			const result = await Shift.open();
 
@@ -148,15 +189,51 @@ describe('Shift', () => {
 		});
 
 		it('should handle response with result but without id', async () => {
+			getUserId.mockResolvedValueOnce('');
 			StaffService.openShift.mockResolvedValueOnce({result: {}});
-			StaffService.getShiftsList.mockResolvedValueOnce({
-				result: [],
-			});
+			StaffService.getShiftsList.mockResolvedValueOnce({result: []});
 
 			const result = await Shift.open();
 
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(result).toBe('');
+		});
+
+		it('should reset the inactivity marker when creating a new shift', async () => {
+			const resetSpy = jest.spyOn(ShiftInactivity, 'reset');
+			getUserId.mockResolvedValueOnce('');
+			StaffService.openShift.mockResolvedValueOnce({result: {id: 'shift-456'}});
+			StaffService.getShiftsList.mockResolvedValueOnce({result: [{id: 'shift-456'}]});
+
+			await Shift.open();
+
+			expect(resetSpy).toHaveBeenCalled();
+		});
+
+		it('should reset the inactivity marker when adopting a remote shift', async () => {
+			const resetSpy = jest.spyOn(ShiftInactivity, 'reset');
+			getUserId.mockResolvedValueOnce('user-123');
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-local' : null));
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [{id: 'remote-999', status: 'opened'}],
+			});
+
+			await Shift.open();
+
+			expect(resetSpy).toHaveBeenCalled();
+		});
+
+		it('should NOT reset the inactivity marker when reusing the current shift', async () => {
+			const resetSpy = jest.spyOn(ShiftInactivity, 'reset');
+			getUserId.mockResolvedValueOnce('user-123');
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-123' : null));
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [{id: 'shift-123', status: 'opened'}],
+			});
+
+			await Shift.open();
+
+			expect(resetSpy).not.toHaveBeenCalled();
 		});
 	});
 
@@ -220,7 +297,8 @@ describe('Shift', () => {
 			expect(StaffService.updateShift).toHaveBeenCalledWith({warehouseId: newWarehouseId});
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
-				expect.objectContaining({warehouseId: newWarehouseId})
+				expect.objectContaining({warehouseId: newWarehouseId}),
+				{expireWithVersion: true}
 			);
 			expect(result).toBe(mockShiftId);
 		});
@@ -271,7 +349,8 @@ describe('Shift', () => {
 
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
-				expect.objectContaining({endDate: mockDate.toISOString()})
+				expect.objectContaining({endDate: mockDate.toISOString()}),
+				{expireWithVersion: true}
 			);
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(StaffService.closeShift).toHaveBeenCalled();
@@ -296,7 +375,8 @@ describe('Shift', () => {
 
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
-				expect.objectContaining({endDate: mockDate.toISOString()})
+				expect.objectContaining({endDate: mockDate.toISOString()}),
+				{expireWithVersion: true}
 			);
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(StaffService.closeShift).toHaveBeenCalled();
@@ -342,7 +422,8 @@ describe('Shift', () => {
 
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
-				expect.objectContaining({endDate: specificDate})
+				expect.objectContaining({endDate: specificDate}),
+				{expireWithVersion: true}
 			);
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(result).toBe(mockShiftId);
@@ -362,7 +443,8 @@ describe('Shift', () => {
 
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
-				expect.objectContaining({endDate: specificDate})
+				expect.objectContaining({endDate: specificDate}),
+				{expireWithVersion: true}
 			);
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(result).toBe('');
@@ -394,7 +476,8 @@ describe('Shift', () => {
 
 			expect(Storage.set).toHaveBeenCalledWith(
 				SHIFT_DATA,
-				expect.objectContaining({endDate: mockDate.toISOString()})
+				expect.objectContaining({endDate: mockDate.toISOString()}),
+				{expireWithVersion: true}
 			);
 			expect(mockCrashlytics.log).toHaveBeenCalled();
 			expect(StaffService.closeShift).toHaveBeenCalled();
@@ -585,7 +668,9 @@ describe('Shift', () => {
 
 			Shift.setCurrentWorkLog(workLog);
 
-			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, workLog.id);
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, workLog.id, {
+				expireWithVersion: true,
+			});
 			expect(Storage.set).toHaveBeenCalledWith(
 				CURRENT_WORKLOG_DATA,
 				expect.objectContaining({
@@ -594,7 +679,8 @@ describe('Shift', () => {
 					suggestedFinishDate: new Date(
 						new Date(startDate).getTime() + 15 * 60 * 1000
 					).toISOString(),
-				})
+				}),
+				{expireWithVersion: true}
 			);
 		});
 
@@ -687,6 +773,29 @@ describe('Shift', () => {
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
 		});
 
+		it('should set the shift to opened when opening a non-pausing (excluded) work log', async () => {
+			const mockParams = {
+				referenceId: 'default-picking-work',
+				name: 'Picking',
+				type: 'work',
+				startDate: '2024-01-15T10:00:00.000Z',
+			};
+
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-1' : undefined));
+			ShiftWorklogs.createId = jest.fn(() => 'picking-id');
+			spyIsInternetReachable.mockResolvedValueOnce(false);
+
+			await Shift.openWorkLog(mockParams);
+
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened', {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_STATUS, 'paused', {
+				expireWithVersion: true,
+			});
+		});
+
 		it('should open excluded worklog types without pausing shift (startDate as milliseconds)', async () => {
 			const mockShiftId = 'shift-123';
 			const mockFormattedId = 'picking-mock-random-id';
@@ -712,11 +821,14 @@ describe('Shift', () => {
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('openWorkLog:', mockParams);
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
 				referenceId: mockParams.referenceId,
+				shiftId: mockShiftId,
 				startDate: expectedISO,
 			});
 			// No debe pausar el turno para actividades excluidas
 			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
-			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, mockFormattedId);
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, mockFormattedId, {
+				expireWithVersion: true,
+			});
 			expect(Storage.set).toHaveBeenCalledWith(
 				CURRENT_WORKLOG_DATA,
 				expect.objectContaining({
@@ -724,7 +836,8 @@ describe('Shift', () => {
 					type: mockParams.type,
 					startDate: expectedISO,
 					shiftId: mockShiftId,
-				})
+				}),
+				{expireWithVersion: true}
 			);
 			expect(result).toEqual(expect.any(String));
 		});
@@ -766,13 +879,19 @@ describe('Shift', () => {
 			});
 			expect(OfflineData.save).toHaveBeenNthCalledWith(2, expect.any(String), {
 				referenceId: mockParams.referenceId,
+				shiftId: mockShiftId,
 				startDate: mockDate.toISOString(),
 			});
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused');
-			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, expect.any(String));
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused', {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, expect.any(String), {
+				expireWithVersion: true,
+			});
 			expect(Storage.set).toHaveBeenCalledWith(
 				CURRENT_WORKLOG_DATA,
-				expect.objectContaining({type: mockParams.type})
+				expect.objectContaining({type: mockParams.type}),
+				{expireWithVersion: true}
 			);
 			expect(result).toEqual(expect.any(String));
 		});
@@ -876,6 +995,7 @@ describe('Shift', () => {
 			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('API Error');
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
 				referenceId: mockParams.referenceId,
+				shiftId: mockShiftId,
 				startDate: isoStartDate,
 			});
 		});
@@ -935,7 +1055,8 @@ describe('Shift', () => {
 				expect.objectContaining({
 					referenceId: mockParams.referenceId,
 					startDate: mockDate.toISOString(),
-				})
+				}),
+				{expireWithVersion: true}
 			);
 			expect(result).toEqual(mockFormattedId);
 		});
@@ -960,6 +1081,35 @@ describe('Shift', () => {
 			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('Network Error');
 			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
 				referenceId: mockParams.referenceId,
+				shiftId: mockShiftId,
+				startDate: isoStartDate,
+			});
+		});
+
+		it('should keep the snapshot shiftId when the shift changes while the batch is in flight (race with Shift.open)', async () => {
+			const mockFormattedId = 'inactivity-mock-random-id';
+			const isoStartDate = '2026-07-08T20:03:27.343Z';
+			const mockParams = {
+				referenceId: 'default-inactivity',
+				name: 'Inactivity',
+				type: 'work',
+				startDate: isoStartDate,
+			};
+
+			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValueOnce(true);
+			Storage.get
+				.mockReturnValueOnce(undefined) // CURRENT_WORKLOG_ID
+				.mockReturnValueOnce('shift-old'); // SHIFT_ID al crear la actividad (snapshot)
+			// Mientras la request estaba en vuelo, el provider abrió un turno nuevo
+			Storage.get.mockReturnValue('shift-new');
+			ShiftWorklogs.createId = jest.fn(() => mockFormattedId);
+			spyIsInternetReachable.mockResolvedValueOnce(true);
+			ShiftWorklogs.batch.mockRejectedValueOnce(new Error('Network Error'));
+
+			await expect(Shift.openWorkLog(mockParams)).rejects.toThrow('Network Error');
+			expect(OfflineData.save).toHaveBeenCalledWith(mockFormattedId, {
+				referenceId: mockParams.referenceId,
+				shiftId: 'shift-old',
 				startDate: isoStartDate,
 			});
 		});
@@ -984,7 +1134,8 @@ describe('Shift', () => {
 
 			expect(Storage.set).toHaveBeenCalledWith(
 				CURRENT_WORKLOG_DATA,
-				expect.not.objectContaining({endDate: expect.anything()})
+				expect.not.objectContaining({endDate: expect.anything()}),
+				{expireWithVersion: true}
 			);
 		});
 	});
@@ -1213,7 +1364,9 @@ describe('Shift', () => {
 
 			expect(mockCrashlytics.log).toHaveBeenCalledWith('finishWorkLog:', mockParams);
 			expect(ShiftWorklogs.batch).toHaveBeenCalled();
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened');
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened', {
+				expireWithVersion: true,
+			});
 			expect(Storage.remove).toHaveBeenCalled();
 		});
 
@@ -1298,6 +1451,43 @@ describe('Shift', () => {
 				endDate: mockDate.toISOString(),
 			});
 			expect(Storage.remove).toHaveBeenCalled();
+		});
+
+		it('should keep the shiftId of the shift the activity was opened in when saving offline (race with Shift.open)', async () => {
+			const mockWorkLogId = 'worklog-456';
+			const mockParams = {
+				id: mockWorkLogId,
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+			};
+			const mockCurrentWorkLog = {
+				referenceId: 'ref-123',
+				name: 'Test Work',
+				type: 'work',
+				startDate: '2024-01-15T09:00:00.000Z',
+				shiftId: 'shift-old',
+			};
+
+			jest
+				.spyOn(ShiftWorklogs, 'isValidWorkLog')
+				.mockReturnValueOnce(true)
+				.mockReturnValueOnce(true)
+				.mockReturnValueOnce(true);
+			Storage.get.mockReturnValueOnce(mockWorkLogId); // CURRENT_WORKLOG_ID
+			Storage.get.mockReturnValueOnce(mockCurrentWorkLog); // CURRENT_WORKLOG_DATA
+			// El provider adoptó/creó otro turno antes del guardado offline
+			Storage.get.mockReturnValue('shift-new');
+			spyIsInternetReachable.mockResolvedValueOnce(false);
+
+			const result = await Shift.finishWorkLog(mockParams);
+
+			expect(OfflineData.save).toHaveBeenCalledWith(mockWorkLogId, {
+				referenceId: mockParams.referenceId,
+				shiftId: 'shift-old',
+				endDate: mockDate.toISOString(),
+			});
+			expect(result).toBe(mockWorkLogId);
 		});
 	});
 
@@ -1708,6 +1898,275 @@ describe('Shift', () => {
 
 			await expect(Shift.reOpen()).rejects.toThrow('Reopen shift failed');
 			expect(mockCrashlytics.recordError).toHaveBeenCalled();
+		});
+	});
+
+	describe('storage version invalidation', () => {
+		const {default: RealOfflineData} = jest.requireActual('../lib/OfflineData');
+		const {default: RealShiftInactivity} = jest.requireActual('../lib/ShiftInactivity');
+
+		it('OfflineData.save persists the buffer with expireWithVersion', () => {
+			Storage.get.mockReturnValueOnce([]);
+
+			RealOfflineData.save('w1', {referenceId: 'ref-1'});
+
+			expect(Storage.set).toHaveBeenCalledWith(OFFLINE_DATA, expect.any(Array), {
+				expireWithVersion: true,
+			});
+		});
+
+		it('OfflineData.replaceAll persists the buffer with expireWithVersion', () => {
+			RealOfflineData.replaceAll([{storageId: 'a', shiftId: 'shift-1'}]);
+
+			expect(Storage.set).toHaveBeenCalledWith(
+				OFFLINE_DATA,
+				[{storageId: 'a', shiftId: 'shift-1'}],
+				{expireWithVersion: true}
+			);
+		});
+
+		it('ShiftInactivity.startTimer persists the reset mark with expireWithVersion', () => {
+			RealShiftInactivity.startTimer({duration: 1000, onTimeout: () => {}, instanceId: 'i1'});
+
+			expect(Storage.set).toHaveBeenCalledWith(LAST_TIMER_RESET_AT, expect.any(Number), {
+				expireWithVersion: true,
+			});
+
+			RealShiftInactivity.clearTimer();
+		});
+	});
+
+	describe('refreshWorkLogs', () => {
+		it('sets the current work log and pauses the shift when the work log is pausing', async () => {
+			const currentWorkLog = {id: 'w1', referenceId: 'regular-work'};
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-1' : null));
+			ShiftWorklogs.getList.mockReset().mockResolvedValue([currentWorkLog]);
+			Formatter.formatWorkLogsFromJanis.mockReset().mockReturnValue([currentWorkLog]);
+			Formatter.splitWorkLogsByStatus.mockReset().mockReturnValue([[currentWorkLog], []]);
+			ShiftWorklogs.isValidWorkLog.mockReset().mockReturnValue(true);
+			ShiftWorklogs.isPausingWorkLog.mockReset().mockReturnValue(true);
+
+			await Shift.refreshWorkLogs();
+
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, 'w1', {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'paused', {
+				expireWithVersion: true,
+			});
+		});
+
+		it('sets the current work log but does not pause when the work log is excluded', async () => {
+			const currentWorkLog = {id: 'p1', referenceId: 'default-picking-work'};
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-1' : null));
+			ShiftWorklogs.getList.mockReset().mockResolvedValue([currentWorkLog]);
+			Formatter.formatWorkLogsFromJanis.mockReset().mockReturnValue([currentWorkLog]);
+			Formatter.splitWorkLogsByStatus.mockReset().mockReturnValue([[currentWorkLog], []]);
+			ShiftWorklogs.isValidWorkLog.mockReset().mockReturnValue(true);
+			ShiftWorklogs.isPausingWorkLog.mockReset().mockReturnValue(false);
+
+			await Shift.refreshWorkLogs();
+
+			expect(Storage.set).toHaveBeenCalledWith(CURRENT_WORKLOG_ID, 'p1', {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_STATUS, 'paused', {
+				expireWithVersion: true,
+			});
+		});
+
+		it('does nothing when there is no valid work log in progress', async () => {
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-1' : null));
+			ShiftWorklogs.getList.mockReset().mockResolvedValue([]);
+			Formatter.formatWorkLogsFromJanis.mockReset().mockReturnValue([]);
+			Formatter.splitWorkLogsByStatus.mockReset().mockReturnValue([[], []]);
+			ShiftWorklogs.isValidWorkLog.mockReset().mockReturnValue(false);
+			ShiftWorklogs.isPausingWorkLog.mockReset().mockReturnValue(false);
+
+			await Shift.refreshWorkLogs();
+
+			expect(Storage.set).not.toHaveBeenCalledWith(
+				CURRENT_WORKLOG_ID,
+				expect.anything(),
+				expect.anything()
+			);
+		});
+
+		it('rejects when fetching the work logs fails', async () => {
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-1' : null));
+			ShiftWorklogs.getList.mockReset().mockRejectedValue(new Error('boom'));
+
+			await expect(Shift.refreshWorkLogs()).rejects.toThrow();
+		});
+	});
+
+	describe('offline work logs by shift', () => {
+		const {default: RealShiftWorklogs} = jest.requireActual('../lib/ShiftWorklogs');
+
+		it('filterShiftWorkLogs keeps only records matching the shiftId', () => {
+			const records = [
+				{storageId: 'a', shiftId: 'shift-1'},
+				{storageId: 'b', shiftId: 'shift-2'},
+				{storageId: 'c', shiftId: 'shift-1'},
+			];
+
+			expect(
+				RealShiftWorklogs.filterShiftWorkLogs({workLogs: records, shiftId: 'shift-1'})
+			).toEqual([
+				{storageId: 'a', shiftId: 'shift-1'},
+				{storageId: 'c', shiftId: 'shift-1'},
+			]);
+		});
+
+		it('filterShiftWorkLogs keeps legacy records without shiftId and applies the date filter to them', () => {
+			const shiftStartDate = '2026-07-08T20:07:20.433Z';
+			const records = [
+				{storageId: 'a', startDate: '2026-07-08T20:13:58.103Z'}, // legacy válido: sin shiftId, posterior al inicio
+				{storageId: 'b', startDate: '2026-07-08T20:05:00.000Z'}, // legacy inválido: sin shiftId, anterior al inicio
+				{storageId: 'c', shiftId: 'shift-2', startDate: '2026-07-08T20:13:58.103Z'}, // de otro turno
+			];
+
+			expect(
+				RealShiftWorklogs.filterShiftWorkLogs({
+					workLogs: records,
+					shiftId: 'shift-1',
+					shiftStartDate,
+				})
+			).toEqual([records[0]]);
+		});
+
+		it('filterShiftWorkLogs discards records dated before the shift started', () => {
+			const shiftStartDate = '2026-07-08T20:07:20.433Z';
+			const records = [
+				{storageId: 'a', shiftId: 'shift-1', endDate: '2026-07-08T20:03:27.343Z'}, // terminó antes del inicio del turno
+				{storageId: 'b', shiftId: 'shift-1', startDate: '2026-07-08T20:05:00.000Z'}, // empezó antes del inicio del turno
+				{storageId: 'c', shiftId: 'shift-1', startDate: shiftStartDate}, // mismo instante del inicio: se conserva
+				{storageId: 'd', shiftId: 'shift-1', startDate: '2026-07-08T20:13:58.103Z'},
+				{storageId: 'e', shiftId: 'shift-1'}, // sin fechas: no hay evidencia para descartarlo
+			];
+
+			expect(
+				RealShiftWorklogs.filterShiftWorkLogs({
+					workLogs: records,
+					shiftId: 'shift-1',
+					shiftStartDate,
+				})
+			).toEqual([records[2], records[3], records[4]]);
+		});
+
+		it('filterShiftWorkLogs discards records with an invalid date', () => {
+			const records = [
+				{storageId: 'a', shiftId: 'shift-1', startDate: 'not-a-date'},
+				{storageId: 'b', shiftId: 'shift-1', startDate: '2026-07-08T20:13:58.103Z'},
+			];
+
+			expect(
+				RealShiftWorklogs.filterShiftWorkLogs({
+					workLogs: records,
+					shiftId: 'shift-1',
+					shiftStartDate: '2026-07-08T20:07:20.433Z',
+				})
+			).toEqual([records[1]]);
+		});
+
+		it('filterShiftWorkLogs does not filter by date when there is no shift start date', () => {
+			const records = [{storageId: 'a', shiftId: 'shift-1', startDate: '2026-07-08T20:03:27.343Z'}];
+
+			expect(
+				RealShiftWorklogs.filterShiftWorkLogs({workLogs: records, shiftId: 'shift-1'})
+			).toEqual(records);
+		});
+
+		it('filterShiftWorkLogs returns an empty array for a non-array input', () => {
+			expect(RealShiftWorklogs.filterShiftWorkLogs()).toEqual([]);
+		});
+
+		it('_saveOffLineWorkLogs persists records stamped with the current shiftId', () => {
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-abc' : null));
+
+			Shift._saveOffLineWorkLogs([
+				{id: 'w1', referenceId: 'ref-1', startDate: '2024-01-15T10:00:00.000Z'},
+			]);
+
+			expect(OfflineData.save).toHaveBeenCalledWith(
+				'w1',
+				expect.objectContaining({
+					referenceId: 'ref-1',
+					shiftId: 'shift-abc',
+					startDate: '2024-01-15T10:00:00.000Z',
+				})
+			);
+		});
+
+		it('_saveOffLineWorkLogs prefers the workLog own shiftId over the current one', () => {
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-new' : null));
+
+			Shift._saveOffLineWorkLogs([
+				{
+					id: 'w1',
+					referenceId: 'ref-1',
+					shiftId: 'shift-old',
+					startDate: '2024-01-15T10:00:00.000Z',
+				},
+			]);
+
+			expect(OfflineData.save).toHaveBeenCalledWith(
+				'w1',
+				expect.objectContaining({shiftId: 'shift-old'})
+			);
+		});
+
+		it('_getOffLineWorkLogs compacts the buffer discarding records dated before the shift started', () => {
+			const shiftStartDate = '2026-07-08T20:07:20.433Z';
+			Storage.get.mockImplementation((key) => {
+				if (key === SHIFT_ID) return 'shift-1';
+				if (key === SHIFT_DATA) return {startDate: shiftStartDate};
+				return null;
+			});
+			const all = [
+				{storageId: 'a', shiftId: 'shift-1', endDate: '2026-07-08T20:03:27.343Z'},
+				{storageId: 'b', shiftId: 'shift-1', startDate: '2026-07-08T20:13:58.103Z'},
+			];
+			const valid = [all[1]];
+			mockOfflineData.get.mockReturnValueOnce(all);
+			ShiftWorklogs.filterShiftWorkLogs.mockReturnValueOnce(valid);
+
+			const result = Shift._getOffLineWorkLogs();
+
+			expect(ShiftWorklogs.filterShiftWorkLogs).toHaveBeenCalledWith({
+				workLogs: all,
+				shiftId: 'shift-1',
+				shiftStartDate,
+			});
+			expect(OfflineData.replaceAll).toHaveBeenCalledWith(valid);
+			expect(result).toEqual(valid);
+		});
+
+		it('_getOffLineWorkLogs compacts the buffer discarding orphan records', () => {
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-1' : null));
+			const all = [
+				{storageId: 'a', shiftId: 'shift-1'},
+				{storageId: 'b', shiftId: 'shift-2'},
+			];
+			const current = [{storageId: 'a', shiftId: 'shift-1'}];
+			mockOfflineData.get.mockReturnValueOnce(all);
+			ShiftWorklogs.filterShiftWorkLogs.mockReturnValueOnce(current);
+
+			const result = Shift._getOffLineWorkLogs();
+
+			expect(OfflineData.replaceAll).toHaveBeenCalledWith(current);
+			expect(result).toEqual(current);
+		});
+
+		it('_getOffLineWorkLogs does not compact when there are no orphans', () => {
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-1' : null));
+			const all = [{storageId: 'a', shiftId: 'shift-1'}];
+			mockOfflineData.get.mockReturnValueOnce(all);
+			ShiftWorklogs.filterShiftWorkLogs.mockReturnValueOnce(all);
+
+			Shift._getOffLineWorkLogs();
+
+			expect(OfflineData.replaceAll).not.toHaveBeenCalled();
 		});
 	});
 });

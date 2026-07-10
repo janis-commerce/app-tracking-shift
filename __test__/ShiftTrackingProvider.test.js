@@ -1,20 +1,19 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react';
 import ShiftTrackingProvider from '../lib/provider/ShiftTrackingProvider';
-import {openShift, downloadWorkLogTypes, getShiftWorkLogsFromJanis} from '../lib/provider/helpers';
+import {downloadWorkLogTypes} from '../lib/provider/helpers';
 import Storage from '../lib/db/StorageService';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
-import ShiftWorklogs from '../lib/ShiftWorklogs';
 import Shift from '../lib/Shift';
 
 jest.mock('../lib/provider/helpers', () => ({
-	openShift: jest.fn(),
 	downloadWorkLogTypes: jest.fn(),
-	getShiftWorkLogsFromJanis: jest.fn(),
 }));
 
 describe('ShiftTrackingProvider', () => {
 	const checkStaffMSAuthorizationSpy = jest.spyOn(Shift, 'checkStaffMSAuthorization');
+	const openSpy = jest.spyOn(Shift, 'open');
+	const refreshSpy = jest.spyOn(Shift, 'refreshWorkLogs');
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -38,16 +37,11 @@ describe('ShiftTrackingProvider', () => {
 			return mockData[key] || null;
 		});
 
-		// Configurar mocks por defecto
-		openShift.mockResolvedValue({
-			openShiftId: 'shift-123',
-			getWorkLogs: false,
-		});
+		// Configurar mocks por defecto: Shift.open devuelve el mismo id que 'shift.id' en storage
+		// (previousShiftId), por lo que getWorkLogs deriva en false por defecto.
+		openSpy.mockResolvedValue('shift-123');
 		downloadWorkLogTypes.mockResolvedValue(undefined);
-		getShiftWorkLogsFromJanis.mockResolvedValue({
-			openWorkLogs: [],
-			closedWorkLogs: [],
-		});
+		refreshSpy.mockResolvedValue({});
 	});
 
 	describe('Staff Authorization Validation', () => {
@@ -73,7 +67,7 @@ describe('ShiftTrackingProvider', () => {
 			await waitFor(() => {
 				expect(getByTestId('unauthorized-test')).toBeDefined();
 				expect(checkStaffMSAuthorizationSpy).toHaveBeenCalledTimes(1);
-				expect(openShift).not.toHaveBeenCalled();
+				expect(openSpy).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 				expect(contextValue.error).toBeNull();
 			});
@@ -113,7 +107,7 @@ describe('ShiftTrackingProvider', () => {
 				expect(getByTestId('auth-error')).toBeDefined();
 				expect(getByTestId('auth-error-type')).toBeDefined();
 				expect(checkStaffMSAuthorizationSpy).toHaveBeenCalledTimes(1);
-				expect(openShift).not.toHaveBeenCalled();
+				expect(openSpy).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 				expect(contextValue.error).toEqual({
 					message: authError.message,
@@ -145,7 +139,7 @@ describe('ShiftTrackingProvider', () => {
 
 			await waitFor(() => {
 				expect(checkStaffMSAuthorizationSpy).toHaveBeenCalledTimes(1);
-				expect(openShift).not.toHaveBeenCalled();
+				expect(openSpy).not.toHaveBeenCalled();
 				expect(downloadWorkLogTypes).not.toHaveBeenCalled();
 				expect(contextValue.error.type).toBe('staffMSAuthorization');
 			});
@@ -159,10 +153,7 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		openShift.mockResolvedValueOnce({
-			openShiftId: 'shift-456',
-			getWorkLogs: false,
-		});
+		openSpy.mockResolvedValueOnce('shift-123');
 		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
 		render(
@@ -172,8 +163,8 @@ describe('ShiftTrackingProvider', () => {
 		);
 
 		await waitFor(() => {
-			expect(openShift).toHaveBeenCalledTimes(1);
-			expect(openShift).toHaveBeenCalledWith({warehouseId: '', onOpenShiftError: null});
+			expect(openSpy).toHaveBeenCalledTimes(1);
+			expect(openSpy).toHaveBeenCalledWith({warehouseId: ''});
 			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -186,10 +177,7 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		openShift.mockResolvedValueOnce({
-			openShiftId: 'shift-456',
-			getWorkLogs: false,
-		});
+		openSpy.mockResolvedValueOnce('shift-123');
 		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
 		render(
@@ -199,8 +187,8 @@ describe('ShiftTrackingProvider', () => {
 		);
 
 		await waitFor(() => {
-			expect(openShift).toHaveBeenCalledTimes(1);
-			expect(openShift).toHaveBeenCalledWith({warehouseId: '', onOpenShiftError: onError});
+			expect(openSpy).toHaveBeenCalledTimes(1);
+			expect(openSpy).toHaveBeenCalledWith({warehouseId: ''});
 			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
 			expect(downloadWorkLogTypes).toHaveBeenCalledWith(onError);
 		});
@@ -214,7 +202,7 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		openShift.mockRejectedValueOnce(openShiftError);
+		openSpy.mockRejectedValueOnce(openShiftError);
 
 		let contextValue;
 
@@ -242,6 +230,28 @@ describe('ShiftTrackingProvider', () => {
 		});
 	});
 
+	it('should invoke onError callback when Shift.open fails', async () => {
+		const onError = jest.fn();
+		const openShiftError = new Error('Failed to open shift');
+		Storage.get.mockReturnValueOnce({
+			settings: {enabledShiftAndWorkLog: true},
+			isExpired: false,
+			expirationTime: Date.now() + 1000,
+		});
+		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
+		openSpy.mockRejectedValueOnce(openShiftError);
+
+		render(
+			<ShiftTrackingProvider onError={onError}>
+				<div>Test Child</div>
+			</ShiftTrackingProvider>
+		);
+
+		await waitFor(() => {
+			expect(onError).toHaveBeenCalledWith(openShiftError);
+		});
+	});
+
 	it('should handle downloadWorkLogTypes error and set error state', async () => {
 		const downloadError = new Error('Failed to download worklog types');
 		Storage.get.mockReturnValueOnce({
@@ -250,10 +260,7 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		openShift.mockResolvedValueOnce({
-			openShiftId: 'shift-456',
-			getWorkLogs: false,
-		});
+		openSpy.mockResolvedValueOnce('shift-123');
 		downloadWorkLogTypes.mockRejectedValueOnce(downloadError);
 
 		let contextValue;
@@ -370,10 +377,7 @@ describe('ShiftTrackingProvider', () => {
 			expirationTime: Date.now() + 1000,
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-		openShift.mockResolvedValueOnce({
-			openShiftId: 'shift-456',
-			getWorkLogs: false,
-		});
+		openSpy.mockResolvedValueOnce('shift-123');
 		downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
 		let contextValue;
@@ -392,7 +396,7 @@ describe('ShiftTrackingProvider', () => {
 		await waitFor(() => {
 			expect(getByTestId('success-test')).toBeDefined();
 			expect(contextValue.error).toBeNull();
-			expect(openShift).toHaveBeenCalledTimes(1);
+			expect(openSpy).toHaveBeenCalledTimes(1);
 			expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -405,7 +409,7 @@ describe('ShiftTrackingProvider', () => {
 		});
 		checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 		const openShiftError = new Error('Open shift failed');
-		openShift.mockRejectedValueOnce(openShiftError);
+		openSpy.mockRejectedValueOnce(openShiftError);
 
 		let contextValue;
 
@@ -432,7 +436,7 @@ describe('ShiftTrackingProvider', () => {
 	});
 
 	describe('WorkLogs History Functionality', () => {
-		it('should call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: true', async () => {
+		it('should call refreshWorkLogs when the shift identity changed (getWorkLogs: true)', async () => {
 			Storage.get.mockReturnValueOnce({
 				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
@@ -440,15 +444,9 @@ describe('ShiftTrackingProvider', () => {
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: true,
-			});
+			openSpy.mockResolvedValueOnce('shift-789');
 			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
-			getShiftWorkLogsFromJanis.mockResolvedValueOnce({
-				openWorkLogs: [],
-				closedWorkLogs: [],
-			});
+			refreshSpy.mockResolvedValueOnce({});
 
 			render(
 				<ShiftTrackingProvider>
@@ -457,12 +455,11 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(getShiftWorkLogsFromJanis).toHaveBeenCalledTimes(1);
-				expect(getShiftWorkLogsFromJanis).toHaveBeenCalledWith('shift-789');
+				expect(refreshSpy).toHaveBeenCalledTimes(1);
 			});
 		});
 
-		it('should NOT call getShiftWorkLogsFromJanis when openShift returns getWorkLogs: false', async () => {
+		it('should NOT call refreshWorkLogs when the shift is reused (getWorkLogs: false)', async () => {
 			Storage.get.mockReturnValueOnce({
 				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
@@ -470,10 +467,7 @@ describe('ShiftTrackingProvider', () => {
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: false,
-			});
+			openSpy.mockResolvedValueOnce('shift-123');
 			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
 			render(
@@ -483,13 +477,13 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(openShift).toHaveBeenCalledTimes(1);
+				expect(openSpy).toHaveBeenCalledTimes(1);
 				expect(downloadWorkLogTypes).toHaveBeenCalledTimes(1);
-				expect(getShiftWorkLogsFromJanis).not.toHaveBeenCalled();
+				expect(refreshSpy).not.toHaveBeenCalled();
 			});
 		});
 
-		it('should handle getShiftWorkLogsFromJanis error and set error state', async () => {
+		it('should handle refreshWorkLogs error and set error state', async () => {
 			const workLogsError = new Error('Failed to fetch work logs');
 			Storage.get.mockReturnValueOnce({
 				settings: {enabledShiftAndWorkLog: true},
@@ -498,12 +492,9 @@ describe('ShiftTrackingProvider', () => {
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: true,
-			});
+			openSpy.mockResolvedValueOnce('shift-789');
 			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
-			getShiftWorkLogsFromJanis.mockRejectedValueOnce(workLogsError);
+			refreshSpy.mockRejectedValueOnce(workLogsError);
 
 			let contextValue;
 
@@ -533,20 +524,7 @@ describe('ShiftTrackingProvider', () => {
 			});
 		});
 
-		it('should set shift status to paused when there is an open workLog that is not excluded', async () => {
-			const mockWorkLogs = {
-				openWorkLogs: [
-					{
-						id: 'worklog-1',
-						referenceId: 'regular-work',
-						name: 'Regular Work',
-						startDate: '2023-01-01T10:00:00Z',
-						endDate: null,
-					},
-				],
-				closedWorkLogs: [],
-			};
-
+		it('should call refreshWorkLogs only once per open execution', async () => {
 			Storage.get.mockReturnValueOnce({
 				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
@@ -554,13 +532,9 @@ describe('ShiftTrackingProvider', () => {
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 
-			jest.spyOn(ShiftWorklogs, 'isValidWorkLog').mockReturnValue(true);
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: true,
-			});
+			openSpy.mockResolvedValueOnce('shift-789');
 			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
-			getShiftWorkLogsFromJanis.mockResolvedValueOnce(mockWorkLogs);
+			refreshSpy.mockResolvedValueOnce({});
 
 			render(
 				<ShiftTrackingProvider>
@@ -569,98 +543,56 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(Storage.set).toHaveBeenCalledWith('shift.status', 'paused');
-				expect(Storage.set).toHaveBeenCalledWith('worklog.id', 'worklog-1');
-				expect(Storage.set).toHaveBeenCalledWith(
-					'worklog.data',
-					expect.objectContaining({
-						id: 'worklog-1',
-						referenceId: 'regular-work',
-						name: 'Regular Work',
-						startDate: '2023-01-01T10:00:00Z',
-						endDate: null,
-					})
-				);
+				expect(refreshSpy).toHaveBeenCalledTimes(1);
 			});
+
+			expect(refreshSpy).toHaveBeenCalledTimes(1);
 		});
+	});
 
-		it('should NOT set shift status to paused when open workLog is excluded', async () => {
-			const mockWorkLogs = {
-				openWorkLogs: [
-					{
-						id: 'picking-worklog-1', // el id que se obtiene de janis es "worklog-1", pero se formatea al recibirlo para la base de datos
-						referenceId: 'default-picking-work', // Esta es una excluded worklog type
-						name: 'Picking Work',
-						startDate: '2023-01-01T10:00:00Z',
-						endDate: null,
-					},
-				],
-				closedWorkLogs: [],
-			};
-
+	describe('Shift initialization flag', () => {
+		it('should expose isShiftInitializationDone as false on the initial render and true after init completes', async () => {
 			Storage.get.mockReturnValueOnce({
 				settings: {enabledShiftAndWorkLog: true},
 				isExpired: false,
 				expirationTime: Date.now() + 1000,
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: true,
-			});
+			openSpy.mockResolvedValueOnce('shift-123');
 			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
-			getShiftWorkLogsFromJanis.mockResolvedValueOnce(mockWorkLogs);
 
-			render(
-				<ShiftTrackingProvider>
-					<div>Test Child</div>
-				</ShiftTrackingProvider>
-			);
-
-			await waitFor(() => {
-				// Debe guardar el worklog data pero NO cambiar el status a paused
-				expect(Storage.set).toHaveBeenCalledWith('worklog.id', 'picking-worklog-1');
-				expect(Storage.set).toHaveBeenCalledWith(
-					'worklog.data',
-					expect.objectContaining({
-						id: 'picking-worklog-1',
-						referenceId: 'default-picking-work',
-						name: 'Picking Work',
-						startDate: '2023-01-01T10:00:00Z',
-						endDate: null,
-					})
-				);
-				expect(Storage.set).not.toHaveBeenCalledWith('shift.status', 'paused');
-			});
-		});
-
-		it('should call getShiftWorkLogsFromJanis only once per openShift execution', async () => {
-			const mockWorkLogs = {
-				openWorkLogs: [],
-				closedWorkLogs: [],
-			};
-
-			Storage.get.mockReturnValueOnce({
-				settings: {enabledShiftAndWorkLog: true},
-				isExpired: false,
-				expirationTime: Date.now() + 1000,
-			});
-			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
-
-			jest
-				.spyOn(ShiftWorklogs, 'isValidWorkLog')
-				.mockReturnValueOnce(false)
-				.mockReturnValueOnce(false);
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-789',
-				getWorkLogs: true,
-			});
-			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
-			getShiftWorkLogsFromJanis.mockResolvedValueOnce(mockWorkLogs);
+			let firstInitializedValue;
+			let contextValue;
 
 			const TestComponent = () => {
-				return <div data-testid="test-component">Test Component</div>;
+				contextValue = React.useContext(ShiftTrackingContext);
+				if (firstInitializedValue === undefined) {
+					firstInitializedValue = contextValue.isShiftInitializationDone;
+				}
+				return <div data-testid="init-flag-test" />;
+			};
+
+			render(
+				<ShiftTrackingProvider>
+					<TestComponent />
+				</ShiftTrackingProvider>
+			);
+
+			expect(firstInitializedValue).toBe(false);
+
+			await waitFor(() => {
+				expect(contextValue.isShiftInitializationDone).toBe(true);
+			});
+		});
+
+		it('should set isShiftInitializationDone to true even when the user is not authorized', async () => {
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(false);
+
+			let contextValue;
+
+			const TestComponent = () => {
+				contextValue = React.useContext(ShiftTrackingContext);
+				return <div data-testid="init-unauth-test" />;
 			};
 
 			render(
@@ -670,12 +602,37 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(getShiftWorkLogsFromJanis).toHaveBeenCalledTimes(1);
-				expect(getShiftWorkLogsFromJanis).toHaveBeenCalledWith('shift-789');
+				expect(contextValue.isShiftInitializationDone).toBe(true);
+				expect(openSpy).not.toHaveBeenCalled();
 			});
+		});
 
-			// Verificar que el mock no fue llamado más veces
-			expect(getShiftWorkLogsFromJanis).toHaveBeenCalledTimes(1);
+		it('should set isShiftInitializationDone to true when Shift.open fails', async () => {
+			Storage.get.mockReturnValueOnce({
+				settings: {enabledShiftAndWorkLog: true},
+				isExpired: false,
+				expirationTime: Date.now() + 1000,
+			});
+			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
+			openSpy.mockRejectedValueOnce(new Error('Open shift failed'));
+
+			let contextValue;
+
+			const TestComponent = () => {
+				contextValue = React.useContext(ShiftTrackingContext);
+				return <div data-testid="init-openerror-test" />;
+			};
+
+			render(
+				<ShiftTrackingProvider>
+					<TestComponent />
+				</ShiftTrackingProvider>
+			);
+
+			await waitFor(() => {
+				expect(contextValue.isShiftInitializationDone).toBe(true);
+				expect(contextValue.error.type).toBe('openShift');
+			});
 		});
 	});
 
@@ -697,10 +654,7 @@ describe('ShiftTrackingProvider', () => {
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-123',
-				getWorkLogs: false,
-			});
+			openSpy.mockResolvedValueOnce('shift-123');
 			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
 			const {rerender} = render(
@@ -710,9 +664,8 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(openShift).toHaveBeenCalledWith({
+				expect(openSpy).toHaveBeenCalledWith({
 					warehouseId: initialWarehouseId,
-					onOpenShiftError: null,
 				});
 			});
 
@@ -745,10 +698,7 @@ describe('ShiftTrackingProvider', () => {
 			});
 			checkStaffMSAuthorizationSpy.mockResolvedValueOnce(true);
 
-			openShift.mockResolvedValueOnce({
-				openShiftId: 'shift-123',
-				getWorkLogs: false,
-			});
+			openSpy.mockResolvedValueOnce('shift-123');
 			downloadWorkLogTypes.mockResolvedValueOnce(undefined);
 
 			const {rerender} = render(
@@ -758,7 +708,7 @@ describe('ShiftTrackingProvider', () => {
 			);
 
 			await waitFor(() => {
-				expect(openShift).toHaveBeenCalled();
+				expect(openSpy).toHaveBeenCalled();
 			});
 
 			// Cambiar el warehouseId

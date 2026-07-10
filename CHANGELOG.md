@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+### Added
+
+- `Shift.open` now resolves the active shift on its own (obtains the `userId`, checks the remote open shift and decides between creating, reusing or adopting a shift), always returning the shift id
+- `ShiftWorklogs.getWorkLogsByShift(offlineWorkLogs, shiftId)` to filter offline work logs by shift
+- `OfflineData.replaceAll(records)` to overwrite the offline buffer
+- `ShiftInactivity.reset()` to clear the inactivity marker (`LAST_TIMER_RESET_AT`) unconditionally
+- `Shift.refreshWorkLogs()` fetches the shift work logs, detects the one in progress, persists it and pauses the shift when it applies (domain logic previously living in the provider)
+
+### Changed
+
+- Offline work logs are stamped with their origin `shiftId` and, when drained, only the ones belonging to the current shift are sent; orphan records are discarded to avoid the buffer getting stuck
+- Operational storage keys (`SHIFT_ID`, `SHIFT_STATUS`, `SHIFT_DATA`, `CURRENT_WORKLOG_ID`, `CURRENT_WORKLOG_DATA`, `OFFLINE_DATA`, `LAST_TIMER_RESET_AT`) now use `expireWithVersion` to invalidate local state when the app version changes
+- `WithShiftTracking` only shows the `pausedShiftComponent` when there is a valid, non-excluded work log in progress
+- `Shift.open` clears the inactivity marker when the shift identity changes (new/adopted), preventing inactivity work logs with a date earlier than the current shift
+- Bumped `@janiscommerce/app-storage` to `>=1.3.0` and `@janiscommerce/app-device-info` to `>=1.3.0`; added `@janiscommerce/oauth-native` as a peer dependency
+
+### Removed
+
+- `provider/helpers/openShift` helper; its logic now lives in `Shift.open`
+- `provider/helpers/getShiftWorkLogsFromJanis` helper; its logic now lives in `Shift.refreshWorkLogs`
+
 ## [2.3.1] 2026-05-18
 
 ### Added
