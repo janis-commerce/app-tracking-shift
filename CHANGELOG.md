@@ -1,11 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [2.3.2-beta.0] 2026-07-10
 
 ### Added
 
 - `Shift.open` now resolves the active shift on its own (obtains the `userId`, checks the remote open shift and decides between creating, reusing or adopting a shift), always returning the shift id
-- `ShiftWorklogs.getWorkLogsByShift(offlineWorkLogs, shiftId)` to filter offline work logs by shift
+- `ShiftWorklogs.filterShiftWorkLogs({workLogs, shiftId, shiftStartDate})` to filter work logs, keeping only those belonging to the given shift and not dated before it started
 - `OfflineData.replaceAll(records)` to overwrite the offline buffer
 - `ShiftInactivity.reset()` to clear the inactivity marker (`LAST_TIMER_RESET_AT`) unconditionally
 - `Shift.refreshWorkLogs()` fetches the shift work logs, detects the one in progress, persists it and pauses the shift when it applies (domain logic previously living in the provider)
