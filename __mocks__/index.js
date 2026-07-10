@@ -238,6 +238,7 @@ export const mockOfflineData = {
 	save: jest.fn(),
 	delete: jest.fn(),
 	deleteAll: jest.fn(),
+	replaceAll: jest.fn(),
 };
 
 // Mock para respuestas de postWorklog con batch de pendientes

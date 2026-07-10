@@ -2,6 +2,7 @@ import React from 'react';
 import {render} from '@testing-library/react';
 import WithShiftTracking from '../lib/components/WithShiftTracking';
 import ShiftTrackingContext from '../lib/context/ShiftTrackingContext';
+import ShiftWorklogs from '../lib/ShiftWorklogs';
 
 // Componente de prueba simple para envolver
 const TestComponent = ({testProp, shiftData}) => (
@@ -63,13 +64,15 @@ describe('WithShiftTracking HOC', () => {
 		expect(queryByTestId('paused-component')).toBeNull();
 	});
 
-	it('should render both paused component and main component when shift is paused and pausedShiftComponent is provided', () => {
+	it('should render both paused component and main component when shift is paused and there is a pausing work log', () => {
+		ShiftWorklogs.isPausingWorkLog.mockReturnValue(true);
 		const WrappedComponent = WithShiftTracking(TestComponent, {
 			pausedShiftComponent: <PausedComponent />,
 		});
 		const mockShiftData = {
 			shiftStatus: 'paused',
 			shiftId: 'shift-123',
+			currentWorkLogData: {referenceId: 'regular-work'},
 		};
 
 		const {getByTestId} = renderWithContext(
@@ -80,6 +83,46 @@ describe('WithShiftTracking HOC', () => {
 		// Verificar que el componente de pausa se renderiza
 		expect(getByTestId('paused-component')).toBeDefined();
 		// Verificar que el componente principal también se renderiza
+		expect(getByTestId('test-component')).toBeDefined();
+	});
+
+	it('should NOT render the paused component when shift is paused but there is no work log in progress', () => {
+		ShiftWorklogs.isPausingWorkLog.mockReturnValue(false);
+		const WrappedComponent = WithShiftTracking(TestComponent, {
+			pausedShiftComponent: <PausedComponent />,
+		});
+		const mockShiftData = {
+			shiftStatus: 'paused',
+			shiftId: 'shift-123',
+			currentWorkLogData: {},
+		};
+
+		const {getByTestId, queryByTestId} = renderWithContext(
+			<WrappedComponent testProp="test-value" />,
+			mockShiftData
+		);
+
+		expect(queryByTestId('paused-component')).toBeNull();
+		expect(getByTestId('test-component')).toBeDefined();
+	});
+
+	it('should NOT render the paused component when the current work log is excluded', () => {
+		ShiftWorklogs.isPausingWorkLog.mockReturnValue(false);
+		const WrappedComponent = WithShiftTracking(TestComponent, {
+			pausedShiftComponent: <PausedComponent />,
+		});
+		const mockShiftData = {
+			shiftStatus: 'paused',
+			shiftId: 'shift-123',
+			currentWorkLogData: {referenceId: 'default-picking-work'},
+		};
+
+		const {getByTestId, queryByTestId} = renderWithContext(
+			<WrappedComponent testProp="test-value" />,
+			mockShiftData
+		);
+
+		expect(queryByTestId('paused-component')).toBeNull();
 		expect(getByTestId('test-component')).toBeDefined();
 	});
 

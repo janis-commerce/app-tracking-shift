@@ -82,6 +82,7 @@ const BASE_CONTEXT = {
 	hasStaffAuthorization: true,
 	currentWorkLogData: {referenceId: null},
 	currentWorkLogId: null,
+	isShiftInitializationDone: true,
 };
 
 const spyLastTimerResetAt = (value) =>
@@ -178,6 +179,8 @@ describe('WithInactivityDetection HOC', () => {
 	describe('Focus behavior when timeout expired at mount time', () => {
 		it('should call openWorkLog immediately on focus when persisted lastTimerResetAt is already expired', () => {
 			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+			jest.spyOn(Shift, 'id', 'get').mockReturnValue('shift-123');
+			jest.spyOn(Shift, 'isExpired').mockReturnValue(false);
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
@@ -265,6 +268,8 @@ describe('WithInactivityDetection HOC', () => {
 	describe('Returning to foreground with expired timeout', () => {
 		it('should call Shift.openWorkLog with inactivity worklog when timeout has expired on foreground return', () => {
 			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+			jest.spyOn(Shift, 'id', 'get').mockReturnValue('shift-123');
+			jest.spyOn(Shift, 'isExpired').mockReturnValue(false);
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
@@ -281,6 +286,102 @@ describe('WithInactivityDetection HOC', () => {
 					type: INTERNAL_WORKLOGS.INACTIVITY.type,
 					name: INTERNAL_WORKLOGS.INACTIVITY.name,
 					isInternal: true,
+				})
+			);
+
+			dateSpy.mockRestore();
+			openWorkLogSpy.mockRestore();
+		});
+	});
+
+	describe('Gate while the shift is not initialized', () => {
+		it('should not configure or start the timer while the shift is not initialized', () => {
+			spyLastTimerResetAt(null);
+
+			renderWithContext({...BASE_CONTEXT, isShiftInitializationDone: false});
+			expect(focusEffectCleanup).not.toBeNull();
+			focusEffectCleanup();
+
+			expect(ShiftInactivity.configureTimer).not.toHaveBeenCalled();
+			expect(ShiftInactivity.startTimer).not.toHaveBeenCalled();
+		});
+
+		it('should not open an inactivity worklog while the shift is not initialized even if the timeout elapsed', () => {
+			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+			jest.spyOn(Shift, 'id', 'get').mockReturnValue('shift-123');
+			jest.spyOn(Shift, 'isExpired').mockReturnValue(false);
+			const now = Date.now();
+			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+
+			renderWithContext({...BASE_CONTEXT, isShiftInitializationDone: false});
+
+			expect(openWorkLogSpy).not.toHaveBeenCalled();
+
+			dateSpy.mockRestore();
+			openWorkLogSpy.mockRestore();
+		});
+
+		it('should configure and start the timer once the shift is initialized', () => {
+			spyLastTimerResetAt(null);
+
+			renderWithContext({...BASE_CONTEXT, isShiftInitializationDone: true});
+
+			expect(ShiftInactivity.configureTimer).toHaveBeenCalledWith(TIMEOUT_MS);
+			expect(ShiftInactivity.startTimer).toHaveBeenCalled();
+		});
+	});
+
+	describe('Shift validity guard before opening inactivity worklog', () => {
+		it('should not call openWorkLog when the shift is expired even if the timeout elapsed', () => {
+			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+			jest.spyOn(Shift, 'id', 'get').mockReturnValue('shift-123');
+			jest.spyOn(Shift, 'isExpired').mockReturnValue(true);
+			const now = Date.now();
+			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+
+			renderWithContext(BASE_CONTEXT);
+
+			expect(openWorkLogSpy).not.toHaveBeenCalled();
+
+			dateSpy.mockRestore();
+			openWorkLogSpy.mockRestore();
+		});
+
+		it('should not call openWorkLog when there is no shift id even if the timeout elapsed', () => {
+			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+			jest.spyOn(Shift, 'id', 'get').mockReturnValue(null);
+			jest.spyOn(Shift, 'isExpired').mockReturnValue(false);
+			const now = Date.now();
+			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+
+			renderWithContext(BASE_CONTEXT);
+
+			expect(openWorkLogSpy).not.toHaveBeenCalled();
+
+			dateSpy.mockRestore();
+			openWorkLogSpy.mockRestore();
+		});
+
+		it('should call openWorkLog when the shift is valid and the timeout elapsed', () => {
+			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+			jest.spyOn(Shift, 'id', 'get').mockReturnValue('shift-123');
+			jest.spyOn(Shift, 'isExpired').mockReturnValue(false);
+			const now = Date.now();
+			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+
+			renderWithContext(BASE_CONTEXT);
+
+			expect(openWorkLogSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					referenceId: INTERNAL_WORKLOGS.INACTIVITY.referenceId,
 				})
 			);
 
