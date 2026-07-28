@@ -1,5 +1,15 @@
 # Changelog
 
+### [Unreleased]
+
+## [2.3.3] 2026-07-29
+
+### Changed
+
+- `ShiftInactivity` persists the timer expiration (`TIMER_EXPIRES_AT`) instead of the last activity timestamp (`LAST_TIMER_RESET_AT`); `ShiftInactivity.lastTimerResetAt` becomes `ShiftInactivity.timerExpiresAt` [HDI-3441](https://janiscommerce.atlassian.net/browse/HDI-3441)
+- Capped the inactivity `startDate` at the current time and the resumed timer duration at the configured timeout, preventing a future date from an inconsistent stored value or a backwards clock adjustment [HDI-3441](https://janiscommerce.atlassian.net/browse/HDI-3441)
+- `useStorageValue` reads its default value from a ref and re-reads the key when subscribing, keeping the storage listener stable when the caller passes an inline default (e.g. `{}`) [HDI-3441](https://janiscommerce.atlassian.net/browse/HDI-3441)
+
 ## [2.3.3-beta.0] 2026-07-28
 
 ### Changed
