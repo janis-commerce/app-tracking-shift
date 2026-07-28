@@ -25,7 +25,7 @@ jest.mock('../lib/ShiftInactivity', () => {
 		stopTimer: jest.fn(),
 		resetTimer: jest.fn(),
 	};
-	Object.defineProperty(mock, 'lastTimerResetAt', {
+	Object.defineProperty(mock, 'timerExpiresAt', {
 		get: jest.fn(() => null),
 		configurable: true,
 	});
@@ -85,8 +85,8 @@ const BASE_CONTEXT = {
 	isShiftInitializationDone: true,
 };
 
-const spyLastTimerResetAt = (value) =>
-	jest.spyOn(ShiftInactivity, 'lastTimerResetAt', 'get').mockReturnValue(value);
+const spyTimerExpiresAt = (value) =>
+	jest.spyOn(ShiftInactivity, 'timerExpiresAt', 'get').mockReturnValue(value);
 
 const renderWithContext = (contextValue = BASE_CONTEXT) => {
 	const WrappedComponent = WithInactivityDetection(TestComponent);
@@ -108,8 +108,8 @@ describe('WithInactivityDetection HOC', () => {
 	});
 
 	describe('Initial behavior', () => {
-		it('should call configureTimer and startTimer with full timeout when there is no persisted lastTimerResetAt', () => {
-			spyLastTimerResetAt(null);
+		it('should call configureTimer and startTimer with full timeout when there is no persisted timerExpiresAt', () => {
+			spyTimerExpiresAt(null);
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -123,7 +123,7 @@ describe('WithInactivityDetection HOC', () => {
 		});
 
 		it('should render the wrapped component inside a View with panHandlers when inactivity is configured', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			const {getByTestId} = renderWithContext(BASE_CONTEXT);
 
@@ -132,7 +132,7 @@ describe('WithInactivityDetection HOC', () => {
 		});
 
 		it('should not configure or start timer when inactivityTimeout is 0', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			// using default values for hasStaffAuthorization, currentWorkLogData and inactivityTimeout
 			renderWithContext({currentWorkLogId: 'some-worklog-id'});
@@ -142,7 +142,7 @@ describe('WithInactivityDetection HOC', () => {
 		});
 
 		it('should not configure or start timer when hasStaffAuthorization is false', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext({...BASE_CONTEXT, hasStaffAuthorization: false});
 			expect(focusEffectCleanup).not.toBeNull();
@@ -153,21 +153,38 @@ describe('WithInactivityDetection HOC', () => {
 		});
 	});
 
-	describe('Behavior with persisted lastTimerResetAt', () => {
-		it('should call startTimer with remaining duration when elapsed time is less than timeout', () => {
-			const elapsedTime = 60 * 1000; // 1 minute elapsed
+	describe('Behavior with persisted timerExpiresAt', () => {
+		it('should call startTimer with the remaining duration when the persisted expiry is in the future', () => {
+			const remainingTime = TIMEOUT_MS - 60 * 1000; // 1 minute already consumed
 			const now = Date.now();
-			const persistedAt = now - elapsedTime;
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(persistedAt);
+			spyTimerExpiresAt(now + remainingTime);
 
 			renderWithContext(BASE_CONTEXT);
 
 			expect(ShiftInactivity.configureTimer).toHaveBeenCalledWith(TIMEOUT_MS);
 			expect(ShiftInactivity.startTimer).toHaveBeenCalledWith(
 				expect.objectContaining({
-					duration: TIMEOUT_MS - elapsedTime,
+					duration: remainingTime,
+					instanceId: FIXED_INSTANCE_ID,
+				})
+			);
+
+			dateSpy.mockRestore();
+		});
+
+		it('should cap the resumed duration to the configured timeout when the persisted expiry is too far in the future', () => {
+			const now = Date.now();
+			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
+			spyTimerExpiresAt(now + TIMEOUT_MS + 60 * 1000); // clock moved backwards
+
+			renderWithContext(BASE_CONTEXT);
+
+			expect(ShiftInactivity.startTimer).toHaveBeenCalledWith(
+				expect.objectContaining({
+					duration: TIMEOUT_MS,
 					instanceId: FIXED_INSTANCE_ID,
 				})
 			);
@@ -177,14 +194,14 @@ describe('WithInactivityDetection HOC', () => {
 	});
 
 	describe('Focus behavior when timeout expired at mount time', () => {
-		it('should call openWorkLog immediately on focus when persisted lastTimerResetAt is already expired', () => {
+		it('should call openWorkLog immediately on focus when the persisted timerExpiresAt is already past', () => {
 			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
 			jest.spyOn(Shift, 'id', 'get').mockReturnValue('shift-123');
 			jest.spyOn(Shift, 'isExpired').mockReturnValue(false);
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+			spyTimerExpiresAt(now - 1000); // expired 1 second ago
 
 			renderWithContext(BASE_CONTEXT);
 			expect(focusEffectCleanup).not.toBeNull();
@@ -202,9 +219,51 @@ describe('WithInactivityDetection HOC', () => {
 		});
 	});
 
+	describe('Inactivity worklog startDate', () => {
+		beforeEach(() => {
+			jest.spyOn(Shift, 'id', 'get').mockReturnValue('shift-123');
+			jest.spyOn(Shift, 'isExpired').mockReturnValue(false);
+		});
+
+		it('should use the persisted expiry as startDate so the inactivity never starts in the future', () => {
+			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+			const now = Date.now();
+			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+			const expiresAt = now - 5000; // expired 5 seconds ago
+
+			spyTimerExpiresAt(expiresAt);
+
+			renderWithContext(BASE_CONTEXT);
+
+			expect(openWorkLogSpy).toHaveBeenCalledWith(
+				expect.objectContaining({startDate: new Date(expiresAt).toISOString()})
+			);
+
+			dateSpy.mockRestore();
+			openWorkLogSpy.mockRestore();
+		});
+
+		it('should not send a startDate when there is no persisted expiry', () => {
+			const openWorkLogSpy = jest.spyOn(Shift, 'openWorkLog').mockResolvedValue('worklog-id');
+
+			spyTimerExpiresAt(null);
+
+			renderWithContext(BASE_CONTEXT);
+
+			// with no persisted expiry the timer is resumed, the worklog is opened by its timeout
+			ShiftInactivity.startTimer.mock.calls[0][0].onTimeout();
+
+			expect(openWorkLogSpy).toHaveBeenCalledWith(
+				expect.not.objectContaining({startDate: expect.anything()})
+			);
+
+			openWorkLogSpy.mockRestore();
+		});
+	});
+
 	describe('Going to background', () => {
 		it('should call clearTimer when app goes from active to background', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -215,7 +274,7 @@ describe('WithInactivityDetection HOC', () => {
 		});
 
 		it('should call clearTimer when app goes from active to inactive', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -225,7 +284,7 @@ describe('WithInactivityDetection HOC', () => {
 		});
 
 		it('should not process appState change when component is not focused', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -242,12 +301,11 @@ describe('WithInactivityDetection HOC', () => {
 
 	describe('Returning to foreground with active timeout', () => {
 		it('should call startTimer with remaining duration when returning to foreground and timeout has not expired', () => {
-			const elapsedTime = 60 * 1000; // 1 minute elapsed
+			const remainingTime = TIMEOUT_MS - 60 * 1000; // 1 minute already consumed
 			const now = Date.now();
-			const persistedAt = now - elapsedTime;
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(persistedAt);
+			spyTimerExpiresAt(now + remainingTime);
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -256,7 +314,7 @@ describe('WithInactivityDetection HOC', () => {
 
 			expect(ShiftInactivity.startTimer).toHaveBeenLastCalledWith(
 				expect.objectContaining({
-					duration: TIMEOUT_MS - elapsedTime,
+					duration: remainingTime,
 					instanceId: FIXED_INSTANCE_ID,
 				})
 			);
@@ -273,7 +331,7 @@ describe('WithInactivityDetection HOC', () => {
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(now - TIMEOUT_MS - 5000); // expired 5 seconds ago
+			spyTimerExpiresAt(now - 5000); // expired 5 seconds ago
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -296,7 +354,7 @@ describe('WithInactivityDetection HOC', () => {
 
 	describe('Gate while the shift is not initialized', () => {
 		it('should not configure or start the timer while the shift is not initialized', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext({...BASE_CONTEXT, isShiftInitializationDone: false});
 			expect(focusEffectCleanup).not.toBeNull();
@@ -313,7 +371,7 @@ describe('WithInactivityDetection HOC', () => {
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+			spyTimerExpiresAt(now - 1000); // expired 1 second ago
 
 			renderWithContext({...BASE_CONTEXT, isShiftInitializationDone: false});
 
@@ -324,7 +382,7 @@ describe('WithInactivityDetection HOC', () => {
 		});
 
 		it('should configure and start the timer once the shift is initialized', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext({...BASE_CONTEXT, isShiftInitializationDone: true});
 
@@ -341,7 +399,7 @@ describe('WithInactivityDetection HOC', () => {
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+			spyTimerExpiresAt(now - 1000); // expired 1 second ago
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -358,7 +416,7 @@ describe('WithInactivityDetection HOC', () => {
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+			spyTimerExpiresAt(now - 1000); // expired 1 second ago
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -375,7 +433,7 @@ describe('WithInactivityDetection HOC', () => {
 			const now = Date.now();
 			const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-			spyLastTimerResetAt(now - TIMEOUT_MS - 1000); // expired 1 second ago
+			spyTimerExpiresAt(now - 1000); // expired 1 second ago
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -393,7 +451,7 @@ describe('WithInactivityDetection HOC', () => {
 	describe('With active worklog in progress', () => {
 		it('should call stopTimer and render without the PanResponder View when currentWorkLogData is a valid non-internal worklog', () => {
 			ShiftWorklogs.isValidWorkLog.mockReturnValue(true);
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			const {queryByTestId, getByTestId} = renderWithContext({
 				...BASE_CONTEXT,
@@ -409,7 +467,7 @@ describe('WithInactivityDetection HOC', () => {
 
 		it('should not start the timer when a valid non-internal worklog is in progress', () => {
 			ShiftWorklogs.isValidWorkLog.mockReturnValue(true);
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext({
 				...BASE_CONTEXT,
@@ -423,7 +481,7 @@ describe('WithInactivityDetection HOC', () => {
 	describe('With inactivity worklog in progress', () => {
 		it('should call stopTimer and render without the PanResponder View when the inactivity worklog is active', () => {
 			ShiftWorklogs.isValidWorkLog.mockReturnValue(false);
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			const {queryByTestId, getByTestId} = renderWithContext({
 				...BASE_CONTEXT,
@@ -440,7 +498,7 @@ describe('WithInactivityDetection HOC', () => {
 
 		it('should not start the timer when the inactivity worklog is active', () => {
 			ShiftWorklogs.isValidWorkLog.mockReturnValue(false);
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext({
 				...BASE_CONTEXT,
@@ -456,7 +514,7 @@ describe('WithInactivityDetection HOC', () => {
 
 	describe('Cleanup on blur/unmount', () => {
 		it('should call stopTimer with instanceId when focus is lost', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -469,7 +527,7 @@ describe('WithInactivityDetection HOC', () => {
 
 	describe('PanResponder touch detection', () => {
 		it('should call resetTimer when user touches the screen and no worklog is active', () => {
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext(BASE_CONTEXT);
 
@@ -481,7 +539,7 @@ describe('WithInactivityDetection HOC', () => {
 
 		it('should not call resetTimer when a valid non-internal worklog is in progress', () => {
 			ShiftWorklogs.isValidWorkLog.mockReturnValue(true);
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext({
 				...BASE_CONTEXT,
@@ -496,7 +554,7 @@ describe('WithInactivityDetection HOC', () => {
 
 		it('should not call resetTimer when the inactivity worklog is active', () => {
 			ShiftWorklogs.isValidWorkLog.mockReturnValue(false);
-			spyLastTimerResetAt(null);
+			spyTimerExpiresAt(null);
 
 			renderWithContext({
 				...BASE_CONTEXT,

@@ -19,7 +19,7 @@ import {
 	EXCLUDED_WORKLOG_TYPES,
 	WORKLOG_TYPES_DATA,
 	OFFLINE_DATA,
-	LAST_TIMER_RESET_AT,
+	TIMER_EXPIRES_AT,
 } from '../lib/constant';
 import Storage from '../lib/db/StorageService';
 import ShiftWorklogs from '../lib/ShiftWorklogs';
@@ -1925,10 +1925,10 @@ describe('Shift', () => {
 			);
 		});
 
-		it('ShiftInactivity.startTimer persists the reset mark with expireWithVersion', () => {
+		it('ShiftInactivity.startTimer persists the expiry with expireWithVersion', () => {
 			RealShiftInactivity.startTimer({duration: 1000, onTimeout: () => {}, instanceId: 'i1'});
 
-			expect(Storage.set).toHaveBeenCalledWith(LAST_TIMER_RESET_AT, expect.any(Number), {
+			expect(Storage.set).toHaveBeenCalledWith(TIMER_EXPIRES_AT, expect.any(Number), {
 				expireWithVersion: true,
 			});
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.3-beta.0] 2026-07-28
+
+### Changed
+
+- `ShiftInactivity` persists the timer expiration (`TIMER_EXPIRES_AT`) instead of the last activity timestamp (`LAST_TIMER_RESET_AT`), and `ShiftInactivity.lastTimerResetAt` becomes `ShiftInactivity.timerExpiresAt`. Resuming a timer with its remaining duration overwrote the activity marker, so the derived `startDate` (`lastTimerResetAt + timeout`) landed in the future; the expiration is invariant across resumptions and is now read instead of derived
+- The inactivity `startDate` is capped at the current time and a resumed timer never runs longer than the configured timeout, so neither an inconsistent stored value nor a backwards clock adjustment can produce a future date
+- `useStorageValue` reads its default value from a ref and re-reads the key when subscribing, keeping the storage listener stable when the caller passes an inline default (e.g. `{}`). The listener was replaced on every render and writes landing in that window were lost, leaving `currentWorkLogData` stale while `currentWorkLogId` did update
+
 ## [2.3.2] 2026-07-20
 
 ### Added
