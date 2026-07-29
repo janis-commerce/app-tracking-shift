@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.4.0-beta.5] 2026-07-29
+
 ### Changed
 
 - `ShiftInactivity` persists the timer expiration (`TIMER_EXPIRES_AT`) instead of the last activity timestamp (`LAST_TIMER_RESET_AT`), and `ShiftInactivity.lastTimerResetAt` becomes `ShiftInactivity.timerExpiresAt`. Resuming a timer with its remaining duration overwrote the activity marker, so the derived `startDate` (`lastTimerResetAt + timeout`) landed in the future; the expiration is invariant across resumptions and is now read instead of derived
