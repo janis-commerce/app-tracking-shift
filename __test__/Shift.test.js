@@ -620,6 +620,15 @@ describe('Shift', () => {
 			expect(result).toBe(true);
 		});
 
+		it('should reset the inactivity timer expiry', async () => {
+			const resetSpy = jest.spyOn(ShiftInactivity, 'reset');
+			mockOfflineData.deleteAll.mockReturnValueOnce(true);
+
+			await Shift.deleteShiftRegisters();
+
+			expect(resetSpy).toHaveBeenCalled();
+		});
+
 		it('should handle OfflineData errors', async () => {
 			const error = new Error('Delete failed');
 			mockOfflineData.deleteAll.mockImplementation(() => {

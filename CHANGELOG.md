@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- `Shift.deleteShiftRegisters` also resets the inactivity timer expiry (`TIMER_EXPIRES_AT`), so clearing the shift state no longer leaves a stale expiry persisted across sessions (e.g. on logout). `Shift.open` no longer needs to reset it separately when creating a new shift
+
 ## [2.4.0-beta.5] 2026-07-29
 
 ### Changed
