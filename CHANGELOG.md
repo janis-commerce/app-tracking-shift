@@ -2,6 +2,40 @@
 
 ### [Unreleased]
 
+## [2.4.0] 2026-08-12
+
+### Added
+
+- Support for React Native 0.80.2: `react` peer dependency widened to `>=17.0.2 <20.0.0` and `react-native` to `>=0.71.5 <0.82.0` [APPSRN-473](https://janiscommerce.atlassian.net/browse/APPSRN-473)
+- `Shift.open` now resolves the active shift on its own: it obtains the `userId`, checks the remote open shift and decides between creating, reusing or adopting a shift, always returning the shift id
+- `Shift.refreshWorkLogs()` fetches the shift work logs, detects the one in progress, persists it and pauses the shift when it applies (domain logic previously living in the provider)
+- `ShiftWorklogs.filterShiftWorkLogs({workLogs, shiftId, shiftStartDate})` to keep only the work logs belonging to a shift and not dated before it started
+- `ShiftWorklogs.isPausingWorkLog(workLog)` to tell whether a work log actually pauses the shift
+- `OfflineData.replaceAll(records)` to overwrite the offline buffer
+- `ShiftInactivity.reset()` to clear the persisted inactivity expiry unconditionally
+- `isShiftInitializationDone` exposed by `ShiftTrackingProvider`, so consumers can tell when the shift initialization finished
+- `CustomError` class extending `Error` with `statusCode` and `code` fields, and an `isInternalError` static method to distinguish internal validation errors from API and connectivity ones
+- `_withReopenRetry` executes a request and, when it fails because the shift is closed, reopens the shift and retries once automatically
+
+### Changed
+
+- `ShiftInactivity` persists the timer expiration (`TIMER_EXPIRES_AT`) instead of the last activity timestamp; `ShiftInactivity.lastTimerResetAt` becomes `ShiftInactivity.timerExpiresAt`. Resuming a timer with its remaining duration overwrote the activity marker and the derived `startDate` landed in the future; the expiration is invariant across resumptions and is now read instead of derived
+- The inactivity `startDate` is capped at the current time and a resumed timer never runs longer than the configured timeout, so neither an inconsistent stored value nor a backwards clock adjustment can produce a future date
+- Offline work logs are stamped with their origin `shiftId` and, when drained, only the ones belonging to the current shift are sent; orphan records are discarded to avoid the buffer getting stuck
+- Operational storage keys (`SHIFT_ID`, `SHIFT_STATUS`, `SHIFT_DATA`, `CURRENT_WORKLOG_ID`, `CURRENT_WORKLOG_DATA`, `OFFLINE_DATA`, `TIMER_EXPIRES_AT`) use `expireWithVersion` to invalidate local state when the app version changes
+- `openWorkLog` persists the activity before adjusting the status, so an interruption leaves the shift `opened` with activity (recoverable) instead of `paused` without activity (blocking)
+- `WithShiftTracking` only shows the `pausedShiftComponent` when there is a valid, non-excluded work log in progress, avoiding a stuck orphan `paused` state
+- `WithInactivityDetection` waits for the shift initialization before configuring the timer, and skips the inactivity work log when there is no shift or it already expired
+- `useStorageValue` reads its default value from a ref and re-reads the key when subscribing, keeping the storage listener stable when the caller passes an inline default (e.g. `{}`). The listener was replaced on every render and writes landing in that window were lost
+- `Shift.deleteShiftRegisters` also resets the inactivity timer expiry, so clearing the shift state no longer leaves a stale expiry persisted across sessions (e.g. on logout)
+- `openWorkLog` and `finishWorkLog` use `CustomError.isInternalError` to decide whether to save work logs offline
+- Bumped `@janiscommerce/app-storage` to `>=1.3.0` and `@janiscommerce/app-device-info` to `>=1.3.0`; added `@janiscommerce/oauth-native` as a peer dependency
+
+### Removed
+
+- `provider/helpers/openShift` helper; its logic now lives in `Shift.open`
+- `provider/helpers/getShiftWorkLogsFromJanis` helper; its logic now lives in `Shift.refreshWorkLogs`
+
 ## [2.3.3] 2026-07-29
 
 ### Changed
@@ -9,14 +43,6 @@
 - `ShiftInactivity` persists the timer expiration (`TIMER_EXPIRES_AT`) instead of the last activity timestamp (`LAST_TIMER_RESET_AT`); `ShiftInactivity.lastTimerResetAt` becomes `ShiftInactivity.timerExpiresAt` [HDI-3441](https://janiscommerce.atlassian.net/browse/HDI-3441)
 - Capped the inactivity `startDate` at the current time and the resumed timer duration at the configured timeout, preventing a future date from an inconsistent stored value or a backwards clock adjustment [HDI-3441](https://janiscommerce.atlassian.net/browse/HDI-3441)
 - `useStorageValue` reads its default value from a ref and re-reads the key when subscribing, keeping the storage listener stable when the caller passes an inline default (e.g. `{}`) [HDI-3441](https://janiscommerce.atlassian.net/browse/HDI-3441)
-
-## [2.3.3-beta.0] 2026-07-28
-
-### Changed
-
-- `ShiftInactivity` persists the timer expiration (`TIMER_EXPIRES_AT`) instead of the last activity timestamp (`LAST_TIMER_RESET_AT`), and `ShiftInactivity.lastTimerResetAt` becomes `ShiftInactivity.timerExpiresAt`. Resuming a timer with its remaining duration overwrote the activity marker, so the derived `startDate` (`lastTimerResetAt + timeout`) landed in the future; the expiration is invariant across resumptions and is now read instead of derived
-- The inactivity `startDate` is capped at the current time and a resumed timer never runs longer than the configured timeout, so neither an inconsistent stored value nor a backwards clock adjustment can produce a future date
-- `useStorageValue` reads its default value from a ref and re-reads the key when subscribing, keeping the storage listener stable when the caller passes an inline default (e.g. `{}`). The listener was replaced on every render and writes landing in that window were lost, leaving `currentWorkLogData` stale while `currentWorkLogId` did update
 
 ## [2.3.2] 2026-07-20
 
