@@ -135,6 +135,15 @@ describe('Shift', () => {
 			expect(result).toBe(mockShiftId);
 		});
 
+		it('should not persist the shift when fetching its data fails', async () => {
+			getUserId.mockResolvedValueOnce('');
+			StaffService.openShift.mockResolvedValueOnce({result: {id: 'shift-456'}});
+			StaffService.getShiftsList.mockRejectedValueOnce(new Error('Network Error'));
+
+			await expect(Shift.open()).rejects.toThrow('Network Error');
+			expect(Storage.set).not.toHaveBeenCalled();
+		});
+
 		it('should reuse the current shift when the remote id matches the local id', async () => {
 			getUserId.mockResolvedValueOnce('user-123');
 			Storage.get.mockImplementation((key) => {
@@ -170,6 +179,31 @@ describe('Shift', () => {
 				expireWithVersion: true,
 			});
 			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_ID, expect.anything(), expect.anything());
+			expect(result).toBe('shift-123');
+		});
+
+		it('should rehydrate an incomplete data when reusing the current shift', async () => {
+			const remoteShift = {...mockShiftData, warehouseId: 'wh-2'};
+			getUserId.mockResolvedValueOnce('user-123');
+			Storage.get.mockImplementation((key) => {
+				if (key === SHIFT_ID) return 'shift-123';
+				if (key === SHIFT_STATUS) return 'opened';
+				// A spread over an absent data leaves an object holding a single key
+				if (key === SHIFT_DATA) return {warehouseId: 'wh-1'};
+				return null;
+			});
+			StaffService.getShiftsList.mockResolvedValueOnce({result: [remoteShift]});
+
+			const result = await Shift.open();
+
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_DATA, remoteShift, {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).not.toHaveBeenCalledWith(
+				SHIFT_STATUS,
+				expect.anything(),
+				expect.anything()
+			);
 			expect(result).toBe('shift-123');
 		});
 
