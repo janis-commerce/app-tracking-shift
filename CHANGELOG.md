@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.4.1] 2026-09-10
+
 ### Fixed
 
 - An interrupted `Shift.open` no longer leaves a shift id stored without its status and data, and reopening the shift recovers whatever is missing from the shift Janis has open, so the app stops reporting the user as out of shift — and its closing deadline as never reached — while Janis still has the shift open [HDI-3569](https://janiscommerce.atlassian.net/browse/HDI-3569)
