@@ -2,6 +2,10 @@
 
 ### [Unreleased]
 
+### Changed
+
+- `Shift.open` keeps the shift storage keys consistent: the shift data is fetched before any write, the id is persisted last as the commit marker of the three keys, and the status is validated before writing, so a failed request or an invalid remote status no longer leaves an id without its status and data. When reusing the current shift, a missing status or data is rehydrated from the remote shift [HDI-3569](https://janiscommerce.atlassian.net/browse/HDI-3569)
+
 ## [2.4.0] 2026-08-12
 
 ### Added

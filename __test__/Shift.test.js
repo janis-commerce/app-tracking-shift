@@ -137,7 +137,12 @@ describe('Shift', () => {
 
 		it('should reuse the current shift when the remote id matches the local id', async () => {
 			getUserId.mockResolvedValueOnce('user-123');
-			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-123' : null));
+			Storage.get.mockImplementation((key) => {
+				if (key === SHIFT_ID) return 'shift-123';
+				if (key === SHIFT_STATUS) return 'opened';
+				if (key === SHIFT_DATA) return mockShiftData;
+				return null;
+			});
 			StaffService.getShiftsList.mockResolvedValueOnce({
 				result: [{id: 'shift-123', status: 'opened'}],
 			});
@@ -145,6 +150,26 @@ describe('Shift', () => {
 			const result = await Shift.open();
 
 			expect(StaffService.openShift).not.toHaveBeenCalled();
+			expect(Storage.set).not.toHaveBeenCalled();
+			expect(result).toBe('shift-123');
+		});
+
+		it('should rehydrate the missing status and data when reusing the current shift', async () => {
+			const remoteShift = {id: 'shift-123', status: 'opened', warehouseId: 'wh-1'};
+			getUserId.mockResolvedValueOnce('user-123');
+			Storage.get.mockImplementation((key) => (key === SHIFT_ID ? 'shift-123' : null));
+			StaffService.getShiftsList.mockResolvedValueOnce({result: [remoteShift]});
+
+			const result = await Shift.open();
+
+			expect(StaffService.openShift).not.toHaveBeenCalled();
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_STATUS, 'opened', {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).toHaveBeenCalledWith(SHIFT_DATA, remoteShift, {
+				expireWithVersion: true,
+			});
+			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_ID, expect.anything(), expect.anything());
 			expect(result).toBe('shift-123');
 		});
 
