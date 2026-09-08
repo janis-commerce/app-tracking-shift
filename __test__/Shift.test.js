@@ -144,8 +144,7 @@ describe('Shift', () => {
 			expect(Storage.set).not.toHaveBeenCalled();
 		});
 
-		it('should reuse the current shift refreshing only its data when the remote id matches the local id', async () => {
-			const remoteShift = {id: 'shift-123', status: 'opened', warehouseId: 'wh-1'};
+		it('should reuse the current shift without rewriting the storage when the remote id matches the local id', async () => {
 			getUserId.mockResolvedValueOnce('user-123');
 			Storage.get.mockImplementation((key) => {
 				if (key === SHIFT_ID) return 'shift-123';
@@ -154,20 +153,14 @@ describe('Shift', () => {
 				if (key === SHIFT_DATA) return mockShiftData;
 				return null;
 			});
-			StaffService.getShiftsList.mockResolvedValueOnce({result: [remoteShift]});
+			StaffService.getShiftsList.mockResolvedValueOnce({
+				result: [{id: 'shift-123', status: 'opened'}],
+			});
 
 			const result = await Shift.open();
 
 			expect(StaffService.openShift).not.toHaveBeenCalled();
-			expect(Storage.set).toHaveBeenCalledWith(SHIFT_DATA, remoteShift, {
-				expireWithVersion: true,
-			});
-			expect(Storage.set).not.toHaveBeenCalledWith(SHIFT_ID, expect.anything(), expect.anything());
-			expect(Storage.set).not.toHaveBeenCalledWith(
-				SHIFT_STATUS,
-				expect.anything(),
-				expect.anything()
-			);
+			expect(Storage.set).not.toHaveBeenCalled();
 			expect(result).toBe('shift-123');
 		});
 
